@@ -51,6 +51,22 @@
             android:textSize="11sp"
             android:textStyle="bold" />
 
+        <!-- Website Badge -->
+        <TextView
+            android:id="@+id/btn_game_site"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="6dp"
+            android:background="#2D2D44"
+            android:paddingStart="8dp"
+            android:paddingTop="4dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="4dp"
+            android:text="🌐 Сайт"
+            android:textColor="#E0E0E0"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
         <!-- Explicit Widget Add Badge -->
         <TextView
             android:id="@+id/btn_add_widget"

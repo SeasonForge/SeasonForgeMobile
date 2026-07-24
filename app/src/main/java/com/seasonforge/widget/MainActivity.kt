@@ -50,7 +50,46 @@ class MainActivity : AppCompatActivity() {
         }
         updateLanguageButtonText()
 
+        val btnWebsite: Button? = findViewById(R.id.btn_open_website)
+        btnWebsite?.setOnClickListener {
+            openWebsiteWithConfirmation("https://seasonforge.online/")
+        }
+
         loadData()
+    }
+
+    fun openWebsiteWithConfirmation(url: String, gameName: String? = null) {
+        val isRu = SeasonUtils.isRu(this)
+        val title = if (isRu) "🌐 Переход на сайт" else "🌐 External Website"
+        val message = if (!gameName.isNullOrEmpty()) {
+            if (isRu) {
+                "Вы действительно хотите открыть страницу игры $gameName на сайте SeasonForge?\n\nСсылка: $url"
+            } else {
+                "Do you want to open $gameName page on SeasonForge website?\n\nURL: $url"
+            }
+        } else {
+            if (isRu) {
+                "Вы действительно хотите перейти на главный сайт SeasonForge?\n\nСсылка: $url"
+            } else {
+                "Do you want to open SeasonForge home page in your browser?\n\nURL: $url"
+            }
+        }
+        val positiveBtn = if (isRu) "Перейти" else "Open"
+        val negativeBtn = if (isRu) "Отмена" else "Cancel"
+
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton(positiveBtn) { _, _ ->
+                try {
+                    val intent = Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    Toast.makeText(this, "Ошибка открытия браузера: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton(negativeBtn, null)
+            .show()
     }
 
     private fun showLanguageDialog() {
@@ -412,6 +451,7 @@ class GameAdapter(
         private val tvNextSeason: TextView = itemView.findViewById(R.id.tv_next_season)
         private val tvProgressPercent: TextView = itemView.findViewById(R.id.tv_progress_percent)
         private val btnNotify: TextView? = itemView.findViewById(R.id.btn_notify)
+        private val btnGameSite: TextView? = itemView.findViewById(R.id.btn_game_site)
         private val btnAddWidget: TextView? = itemView.findViewById(R.id.btn_add_widget)
 
         fun bind(game: Game) {
@@ -442,6 +482,12 @@ class GameAdapter(
             } else {
                 btnNotify?.text = if (SeasonUtils.isRu(context)) "🔔 Напомнить" else "🔔 Remind"
                 btnNotify?.setTextColor(android.graphics.Color.parseColor("#E0E0E0"))
+            }
+
+            btnGameSite?.text = if (SeasonUtils.isRu(context)) "🌐 Сайт" else "🌐 Web"
+            btnGameSite?.setOnClickListener {
+                val url = "https://seasonforge.online/games/${game.id}/"
+                (context as? MainActivity)?.openWebsiteWithConfirmation(url, game.name?.get(context) ?: game.id)
             }
 
             btnAddWidget?.text = if (SeasonUtils.isRu(context)) "➕ Виджет" else "➕ Widget"

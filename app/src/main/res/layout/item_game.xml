@@ -2,14 +2,12 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="12dp"
+    android:layout_marginBottom="14dp"
     android:background="@drawable/widget_bg"
-    android:clickable="true"
-    android:focusable="true"
-    android:foreground="?android:attr/selectableItemBackground"
     android:orientation="vertical"
     android:padding="16dp">
 
+    <!-- Top Row: Game Name & Status Badge -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -21,73 +19,32 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Path of Exile"
+            android:text="Path of Exile 2"
             android:textColor="#F5C342"
-            android:textSize="16sp"
+            android:textSize="18sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/tv_game_status"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="10dp"
+            android:background="@drawable/widget_status_pill_bg"
+            android:paddingStart="10dp"
+            android:paddingTop="4dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="4dp"
             android:text="В разработке"
             android:textColor="#A0A0B0"
-            android:textSize="12sp" />
-
-        <!-- Notification Badge -->
-        <TextView
-            android:id="@+id/btn_notify"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="6dp"
-            android:background="#2D2D44"
-            android:paddingStart="8dp"
-            android:paddingTop="4dp"
-            android:paddingEnd="8dp"
-            android:paddingBottom="4dp"
-            android:text="🔔 Напомнить"
-            android:textColor="#E0E0E0"
-            android:textSize="11sp"
-            android:textStyle="bold" />
-
-        <!-- Website Badge -->
-        <TextView
-            android:id="@+id/btn_game_site"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="6dp"
-            android:background="#2D2D44"
-            android:paddingStart="8dp"
-            android:paddingTop="4dp"
-            android:paddingEnd="8dp"
-            android:paddingBottom="4dp"
-            android:text="🌐 Сайт"
-            android:textColor="#E0E0E0"
-            android:textSize="11sp"
-            android:textStyle="bold" />
-
-        <!-- Explicit Widget Add Badge -->
-        <TextView
-            android:id="@+id/btn_add_widget"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="#2D2D44"
-            android:paddingStart="8dp"
-            android:paddingTop="4dp"
-            android:paddingEnd="8dp"
-            android:paddingBottom="4dp"
-            android:text="➕ Виджет"
-            android:textColor="#F5C342"
-            android:textSize="11sp"
+            android:textSize="12sp"
             android:textStyle="bold" />
     </LinearLayout>
 
+    <!-- Season Info & Progress Bar -->
     <TextView
         android:id="@+id/tv_current_season"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="10dp"
         android:text="Текущий сезон: ..."
         android:textColor="#FFFFFF"
         android:textSize="14sp" />
@@ -98,9 +55,9 @@
         android:layout_width="match_parent"
         android:layout_height="6dp"
         android:layout_marginTop="8dp"
-        android:progressDrawable="@drawable/widget_progress_style"
         android:max="100"
-        android:progress="0" />
+        android:progress="0"
+        android:progressDrawable="@drawable/widget_progress_style" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -113,9 +70,9 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="След.: ..."
+            android:text="След. сезон: ..."
             android:textColor="#A0A0B0"
-            android:textSize="12sp" />
+            android:textSize="13sp" />
 
         <TextView
             android:id="@+id/tv_progress_percent"
@@ -123,7 +80,71 @@
             android:layout_height="wrap_content"
             android:text="0%"
             android:textColor="#F5C342"
-            android:textSize="12sp"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Bottom Action Bar: 3 Large Clickable Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="14dp"
+        android:orientation="horizontal">
+
+        <!-- 1. Remind Button -->
+        <TextView
+            android:id="@+id/btn_notify"
+            android:layout_width="0dp"
+            android:layout_height="42dp"
+            android:layout_weight="1"
+            android:background="@drawable/widget_box_bg"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?android:attr/selectableItemBackground"
+            android:gravity="center"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:text="🔔 Напомнить"
+            android:textColor="#E0E0E0"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <!-- 2. Website Button -->
+        <TextView
+            android:id="@+id/btn_game_site"
+            android:layout_width="0dp"
+            android:layout_height="42dp"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:background="@drawable/widget_box_bg"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?android:attr/selectableItemBackground"
+            android:gravity="center"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:text="🌐 Сайт"
+            android:textColor="#E0E0E0"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <!-- 3. Widget Button -->
+        <TextView
+            android:id="@+id/btn_add_widget"
+            android:layout_width="0dp"
+            android:layout_height="42dp"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:background="@drawable/widget_box_bg"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?android:attr/selectableItemBackground"
+            android:gravity="center"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp"
+            android:text="➕ Виджет"
+            android:textColor="#F5C342"
+            android:textSize="13sp"
             android:textStyle="bold" />
     </LinearLayout>
 

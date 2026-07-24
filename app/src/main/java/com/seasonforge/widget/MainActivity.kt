@@ -121,6 +121,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateLanguageButtonText() {
         val btn: Button? = findViewById(R.id.btn_change_language)
+        val btnWebsite: Button? = findViewById(R.id.btn_open_website)
         val tvHint: TextView? = findViewById(R.id.tv_app_hint)
         val prefs = getSharedPreferences("com.seasonforge.widget.PREFS", MODE_PRIVATE)
         val current = prefs.getString("app_language", "auto")
@@ -130,7 +131,10 @@ class MainActivity : AppCompatActivity() {
             else -> "🌐 Авто"
         }
 
-        if (SeasonUtils.isRu(this)) {
+        val isRuLang = SeasonUtils.isRu(this)
+        btnWebsite?.text = if (isRuLang) "🌐 Сайт" else "🌐 Website"
+
+        if (isRuLang) {
             tvHint?.text = "💡 Нажмите на игру для настройки и добавления виджета"
         } else {
             tvHint?.text = "💡 Tap on a game to configure and add widget"

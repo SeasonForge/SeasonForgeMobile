@@ -495,6 +495,9 @@ class GameAdapter(
             }
 
             btnAddWidget?.text = if (SeasonUtils.isRu(context)) "➕ Виджет" else "➕ Widget"
+            btnAddWidget?.setOnClickListener {
+                onItemClick(game)
+            }
 
             btnNotify?.setOnClickListener {
                 (context as? MainActivity)?.showNotificationDialog(game)

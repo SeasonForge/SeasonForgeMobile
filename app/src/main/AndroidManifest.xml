@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@drawable/ic_launcher"
+        android:label="SeasonForge"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Material3.DayNight">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".WidgetConfigActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+
+        <receiver
+            android:name=".CurrentSeasonWidget"
+            android:exported="true"
+            android:label="SeasonForge — Карточка сезона">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.seasonforge.widget.ACTION_MANUAL_REFRESH_CARD" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_current_info" />
+        </receiver>
+
+        <receiver
+            android:name=".CountdownWidget"
+            android:exported="true"
+            android:label="SeasonForge — Таймер (3 плашки)">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.seasonforge.widget.ACTION_SMART_UPDATE" />
+                <action android:name="com.seasonforge.widget.ACTION_MANUAL_REFRESH" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_countdown_info" />
+        </receiver>
+
+        <receiver
+            android:name=".CombinedWidget"
+            android:exported="true"
+            android:label="SeasonForge — Комбинированный">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.seasonforge.widget.ACTION_SMART_UPDATE_COMBINED" />
+                <action android:name="com.seasonforge.widget.ACTION_MANUAL_REFRESH_COMBINED" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_combined_info" />
+        </receiver>
+
+        <receiver
+            android:name=".WidgetPinReceiver"
+            android:exported="false" />
+
+        <receiver
+            android:name=".utils.NotificationReceiver"
+            android:exported="false" />
+
+    </application>
+
+</manifest>

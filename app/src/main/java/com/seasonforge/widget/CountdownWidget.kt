@@ -141,6 +141,9 @@ class CountdownWidget : AppWidgetProvider() {
                     views.setTextViewText(R.id.tv_box_days_val, "$days")
                     views.setTextViewText(R.id.tv_box_hours_val, "$hours")
                     views.setTextViewText(R.id.tv_box_mins_val, "$mins")
+                    views.setTextViewText(R.id.tv_box_days_label, SeasonUtils.getDaysLabel(context))
+                    views.setTextViewText(R.id.tv_box_hours_label, SeasonUtils.getHoursLabel(context))
+                    views.setTextViewText(R.id.tv_box_mins_label, SeasonUtils.getMinsLabel(context))
 
                     val footerText = if (startDateStr.isNotEmpty() && startDateStr != "TBA") {
                         val formattedDate = startDateStr.take(10)

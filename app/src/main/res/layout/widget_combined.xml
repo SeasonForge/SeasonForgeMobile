@@ -153,6 +153,7 @@
                     android:textStyle="bold" />
 
                 <TextView
+                    android:id="@+id/tv_box_days_label"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="ДНЕЙ"
@@ -191,6 +192,7 @@
                     android:textStyle="bold" />
 
                 <TextView
+                    android:id="@+id/tv_box_hours_label"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="ЧАСОВ"
@@ -229,6 +231,7 @@
                     android:textStyle="bold" />
 
                 <TextView
+                    android:id="@+id/tv_box_mins_label"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="МИНУТ"

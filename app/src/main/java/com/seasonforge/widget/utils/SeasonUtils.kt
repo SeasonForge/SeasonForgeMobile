@@ -74,6 +74,10 @@ object SeasonUtils {
     fun getWidgetUpdatedToastText(context: android.content.Context? = null): String = if (isRu(context)) "Данные виджета обновлены" else "Widget data updated"
     fun getDataUnavailableText(context: android.content.Context? = null): String = if (isRu(context)) "Данные недоступны" else "Data unavailable"
 
+    fun getDaysLabel(context: android.content.Context? = null): String = if (isRu(context)) "ДНЕЙ" else "DAYS"
+    fun getHoursLabel(context: android.content.Context? = null): String = if (isRu(context)) "ЧАСОВ" else "HOURS"
+    fun getMinsLabel(context: android.content.Context? = null): String = if (isRu(context)) "МИНУТ" else "MINS"
+
     fun getCountdownText(targetDateStr: String?, context: android.content.Context? = null): String {
         val triple = getCountdownTriple(targetDateStr) ?: return "TBA"
         val (days, hours, mins) = triple

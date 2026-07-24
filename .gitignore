@@ -14,10 +14,12 @@ local.properties
 .navigation/
 captures/
 
-# Output files
+# Output files & Keystores
 *.apk
 *.aab
 *.ap_
+*.keystore
+*.jks
 
 # Antigravity & System generated
 .gemini/

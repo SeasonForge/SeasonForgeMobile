@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
 import com.seasonforge.widget.data.SeasonRepository
+import com.seasonforge.widget.utils.SeasonAlarmScheduler
 import com.seasonforge.widget.utils.SeasonUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -124,7 +125,7 @@ class CurrentSeasonWidget : AppWidgetProvider() {
             val opacity = getWidgetOpacity(context, appWidgetId)
 
             CoroutineScope(Dispatchers.IO).launch {
-                val repository = SeasonRepository()
+                val repository = SeasonRepository(context)
                 val response = repository.fetchSeasons()
                 val game = response?.games?.find { it.id == gameId }
 
@@ -151,25 +152,30 @@ class CurrentSeasonWidget : AppWidgetProvider() {
                     } else {
                         mainViews.setTextViewText(R.id.widget_next_season, "${SeasonUtils.getNextSeasonLabel(context)}: TBA")
                     }
+
+                    // Schedule next energy-efficient update
+                    SeasonAlarmScheduler.scheduleNextUpdate(
+                        context,
+                        appWidgetId,
+                        game,
+                        CurrentSeasonWidget::class.java,
+                        "com.seasonforge.widget.ACTION_SMART_UPDATE_CARD",
+                        EXTRA_WIDGET_ID
+                    )
                 } else {
-                    mainViews.setTextViewText(R.id.widget_game_name, if (SeasonUtils.isRu(context)) "Ошибка" else "Error")
-                    mainViews.setTextViewText(R.id.widget_season_name, SeasonUtils.getDataUnavailableText(context))
-                    mainViews.setProgressBar(R.id.widget_progress_bar, 100, 0, false)
-                    mainViews.setTextViewText(R.id.widget_progress_text, "0%")
-                    mainViews.setTextViewText(R.id.widget_next_season, "")
+                    mainViews.setTextViewText(R.id.widget_status, SeasonUtils.getDataUnavailableText(context))
                 }
 
-                // Click on widget to update
-                val intent = Intent(context, CurrentSeasonWidget::class.java).apply {
+                // Click Intent for manual refresh
+                val refreshIntent = Intent(context, CurrentSeasonWidget::class.java).apply {
                     action = ACTION_MANUAL_REFRESH
                     putExtra(EXTRA_WIDGET_ID, appWidgetId)
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(appWidgetId))
                     setPackage(context.packageName)
                 }
                 val pendingIntent = PendingIntent.getBroadcast(
                     context,
                     appWidgetId,
-                    intent,
+                    refreshIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
                 mainViews.setOnClickPendingIntent(R.id.widget_container, pendingIntent)

@@ -69,11 +69,11 @@ class WidgetConfigActivity : AppCompatActivity() {
 
     private fun loadGames() {
         CoroutineScope(Dispatchers.IO).launch {
-            val repository = SeasonRepository()
+            val repository = SeasonRepository(this@WidgetConfigActivity)
             val response = repository.fetchSeasons()
 
             val list = response?.games?.map {
-                val displayName = "${it.icon ?: ""} ${it.name?.get("ru") ?: it.id}".trim()
+                val displayName = "${it.icon ?: ""} ${it.name?.get(this@WidgetConfigActivity) ?: it.id}".trim()
                 Pair(it.id, displayName)
             } ?: listOf(
                 Pair("path-of-exile", "Path of Exile 1"),

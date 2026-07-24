@@ -154,7 +154,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadData() {
         CoroutineScope(Dispatchers.IO).launch {
-            val repository = SeasonRepository()
+            val repository = SeasonRepository(this@MainActivity)
             val response = repository.fetchSeasons()
             val games = response?.games ?: emptyList()
 

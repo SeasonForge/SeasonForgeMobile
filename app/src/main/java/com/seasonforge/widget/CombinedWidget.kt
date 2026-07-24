@@ -117,7 +117,7 @@ class CombinedWidget : AppWidgetProvider() {
             val opacity = getWidgetOpacity(context, appWidgetId)
 
             CoroutineScope(Dispatchers.IO).launch {
-                val repository = SeasonRepository()
+                val repository = SeasonRepository(context)
                 val response = repository.fetchSeasons()
                 val game = response?.games?.find { it.id == gameId }
 
@@ -166,27 +166,20 @@ class CombinedWidget : AppWidgetProvider() {
                         EXTRA_WIDGET_ID
                     )
                 } else {
-                    views.setTextViewText(R.id.tv_game_title, if (SeasonUtils.isRu(context)) "Ошибка" else "Error")
-                    views.setTextViewText(R.id.tv_current_season_title, SeasonUtils.getDataUnavailableText(context))
-                    views.setProgressBar(R.id.pb_combined_progress, 100, 0, false)
-                    views.setTextViewText(R.id.widget_progress_text, "0%")
-                    views.setTextViewText(R.id.tv_box_days_val, "0")
-                    views.setTextViewText(R.id.tv_box_hours_val, "0")
-                    views.setTextViewText(R.id.tv_box_mins_val, "0")
+                    views.setTextViewText(R.id.tv_status, SeasonUtils.getDataUnavailableText(context))
                 }
 
-                // Click to refresh manually
-                val intent = Intent(context, CombinedWidget::class.java).apply {
+                // Click Intent for manual refresh
+                val refreshIntent = Intent(context, CombinedWidget::class.java).apply {
                     action = ACTION_MANUAL_REFRESH
                     putExtra(EXTRA_WIDGET_ID, appWidgetId)
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, intArrayOf(appWidgetId))
                     setPackage(context.packageName)
                 }
                 val pendingIntent = PendingIntent.getBroadcast(
                     context,
                     appWidgetId,
-                    intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    refreshIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
                 )
                 views.setOnClickPendingIntent(R.id.widget_combined_container, pendingIntent)
 

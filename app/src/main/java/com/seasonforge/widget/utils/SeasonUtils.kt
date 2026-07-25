@@ -105,6 +105,28 @@ object SeasonUtils {
         return Triple(days, hours, mins)
     }
 
+    fun getGameArtResource(gameId: String?): Int? {
+        return when (gameId) {
+            "path-of-exile" -> com.seasonforge.widget.R.drawable.bg_poe_1
+            "path-of-exile-2" -> com.seasonforge.widget.R.drawable.bg_poe_2
+            "diablo-iv" -> com.seasonforge.widget.R.drawable.bg_diablo_iv
+            "last-epoch" -> com.seasonforge.widget.R.drawable.bg_last_epoch
+            "torchlight-infinite" -> com.seasonforge.widget.R.drawable.bg_torchlight
+            else -> null
+        }
+    }
+
+    fun getGameCardBackgroundResource(gameId: String?): Int {
+        return when (gameId) {
+            "path-of-exile" -> com.seasonforge.widget.R.drawable.item_card_bg_poe1
+            "path-of-exile-2" -> com.seasonforge.widget.R.drawable.item_card_bg_poe2
+            "diablo-iv" -> com.seasonforge.widget.R.drawable.item_card_bg_diablo
+            "last-epoch" -> com.seasonforge.widget.R.drawable.item_card_bg_lastepoch
+            "torchlight-infinite" -> com.seasonforge.widget.R.drawable.item_card_bg_torchlight
+            else -> com.seasonforge.widget.R.drawable.widget_bg
+        }
+    }
+
     /**
      * Calculates ARGB Int for background with specified theme and transparency (0..100)
      * 0% transparency = 100% opaque solid background
@@ -112,19 +134,19 @@ object SeasonUtils {
      * 100% transparency = completely transparent
      */
     fun getBackgroundColor(theme: String, transparencyPercent: Int, gameColorHex: String?): Int {
-        if (theme == "minimal") return Color.TRANSPARENT
+        if (theme == "minimal" || theme == "transparent") return Color.TRANSPARENT
 
         val alpha = ((100 - transparencyPercent.coerceIn(0, 100)) * 255 / 100)
 
         val baseColor = when (theme) {
-            "game" -> {
+            "game", "art" -> {
                 try {
-                    Color.parseColor(gameColorHex ?: "#1E1E2C")
+                    Color.parseColor(gameColorHex ?: "#121420")
                 } catch (e: Exception) {
-                    Color.parseColor("#1E1E2C")
+                    Color.parseColor("#121420")
                 }
             }
-            else -> Color.parseColor("#1E1E2C") // "dark"
+            else -> Color.parseColor("#1E1E2C") // "dark" / "clean"
         }
 
         val red = Color.red(baseColor)
@@ -132,5 +154,91 @@ object SeasonUtils {
         val blue = Color.blue(baseColor)
 
         return Color.argb(alpha, red, green, blue)
+    }
+}
+
+object WidgetPrefsManager {
+    private const val PREFS_NAME = "com.seasonforge.widget.PREFS"
+    private const val PREF_GAME_ID_KEY = "game_id_"
+    private const val PREF_THEME_KEY = "theme_"
+    private const val PREF_OPACITY_KEY = "opacity_"
+
+    private const val PENDING_GAME_ID = "pending_game_id"
+    private const val PENDING_THEME = "pending_theme"
+    private const val PENDING_OPACITY = "pending_opacity"
+    const val PREF_LAST_SELECTED_GAME = "last_selected_game"
+
+    fun savePendingConfig(context: android.content.Context, gameId: String, theme: String, opacity: Int) {
+        context.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
+            .edit()
+            .putString(PENDING_GAME_ID, gameId)
+            .putString(PENDING_THEME, theme)
+            .putInt(PENDING_OPACITY, opacity)
+            .apply()
+    }
+
+    fun saveWidgetConfig(context: android.content.Context, appWidgetId: Int, gameId: String, theme: String, opacity: Int) {
+        context.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
+            .edit()
+            .putString(PREF_GAME_ID_KEY + appWidgetId, gameId)
+            .putString(PREF_THEME_KEY + appWidgetId, theme)
+            .putInt(PREF_OPACITY_KEY + appWidgetId, opacity)
+            .apply()
+    }
+
+    fun saveLastSelectedGameId(context: android.content.Context, gameId: String) {
+        context.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
+            .edit()
+            .putString(PREF_LAST_SELECTED_GAME, gameId)
+            .apply()
+    }
+
+    fun getGameId(context: android.content.Context, appWidgetId: Int): String {
+        val prefs = context.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
+        val saved = prefs.getString(PREF_GAME_ID_KEY + appWidgetId, null)
+        if (!saved.isNullOrEmpty()) return saved
+
+        val pending = prefs.getString(PENDING_GAME_ID, null)
+        if (!pending.isNullOrEmpty()) {
+            prefs.edit().putString(PREF_GAME_ID_KEY + appWidgetId, pending).apply()
+            return pending
+        }
+
+        val lastSelected = prefs.getString(PREF_LAST_SELECTED_GAME, null)
+        if (!lastSelected.isNullOrEmpty()) return lastSelected
+
+        return "path-of-exile-2"
+    }
+
+    fun getWidgetTheme(context: android.content.Context, appWidgetId: Int): String {
+        val prefs = context.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
+        val saved = prefs.getString(PREF_THEME_KEY + appWidgetId, null)
+        if (!saved.isNullOrEmpty()) return saved
+
+        val pending = prefs.getString(PENDING_THEME, null)
+        if (!pending.isNullOrEmpty()) {
+            prefs.edit().putString(PREF_THEME_KEY + appWidgetId, pending).apply()
+            return pending
+        }
+
+        return "dark"
+    }
+
+    fun getWidgetOpacity(context: android.content.Context, appWidgetId: Int): Int {
+        val prefs = context.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
+        if (prefs.contains(PREF_OPACITY_KEY + appWidgetId)) {
+            return prefs.getInt(PREF_OPACITY_KEY + appWidgetId, 15)
+        }
+
+        return prefs.getInt(PENDING_OPACITY, 15)
+    }
+
+    fun deleteWidgetConfig(context: android.content.Context, appWidgetId: Int) {
+        context.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
+            .edit()
+            .remove(PREF_GAME_ID_KEY + appWidgetId)
+            .remove(PREF_THEME_KEY + appWidgetId)
+            .remove(PREF_OPACITY_KEY + appWidgetId)
+            .apply()
     }
 }

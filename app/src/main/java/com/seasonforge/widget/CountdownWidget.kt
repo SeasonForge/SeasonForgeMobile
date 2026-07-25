@@ -62,49 +62,24 @@ class CountdownWidget : AppWidgetProvider() {
         const val ACTION_MANUAL_REFRESH = "com.seasonforge.widget.ACTION_MANUAL_REFRESH"
         const val EXTRA_WIDGET_ID = "com.seasonforge.widget.EXTRA_WIDGET_ID"
 
-        private const val PREFS_NAME = "com.seasonforge.widget.COUNTDOWN_PREFS"
-        private const val PREF_GAME_ID_KEY = "countdown_game_id_"
-        private const val PREF_THEME_KEY = "countdown_theme_"
-        private const val PREF_OPACITY_KEY = "countdown_opacity_"
-
         fun saveWidgetTheme(context: Context, appWidgetId: Int, gameId: String, theme: String, opacity: Int) {
-            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .edit()
-                .putString(PREF_GAME_ID_KEY + appWidgetId, gameId)
-                .putString(PREF_THEME_KEY + appWidgetId, theme)
-                .putInt(PREF_OPACITY_KEY + appWidgetId, opacity)
-                .apply()
+            com.seasonforge.widget.utils.WidgetPrefsManager.saveWidgetConfig(context, appWidgetId, gameId, theme, opacity)
         }
 
         fun getGameId(context: Context, appWidgetId: Int): String {
-            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            val saved = prefs.getString(PREF_GAME_ID_KEY + appWidgetId, null)
-            if (!saved.isNullOrEmpty()) return saved
-
-            val mainPrefs = context.getSharedPreferences("com.seasonforge.widget.PREFS", Context.MODE_PRIVATE)
-            val lastSelected = mainPrefs.getString(CurrentSeasonWidget.PREF_LAST_SELECTED_GAME, null)
-            if (!lastSelected.isNullOrEmpty()) return lastSelected
-
-            return "path-of-exile"
+            return com.seasonforge.widget.utils.WidgetPrefsManager.getGameId(context, appWidgetId)
         }
 
         fun getWidgetTheme(context: Context, appWidgetId: Int): String {
-            return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .getString(PREF_THEME_KEY + appWidgetId, "dark") ?: "dark"
+            return com.seasonforge.widget.utils.WidgetPrefsManager.getWidgetTheme(context, appWidgetId)
         }
 
         fun getWidgetOpacity(context: Context, appWidgetId: Int): Int {
-            return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .getInt(PREF_OPACITY_KEY + appWidgetId, 15)
+            return com.seasonforge.widget.utils.WidgetPrefsManager.getWidgetOpacity(context, appWidgetId)
         }
 
         fun deleteGameId(context: Context, appWidgetId: Int) {
-            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .edit()
-                .remove(PREF_GAME_ID_KEY + appWidgetId)
-                .remove(PREF_THEME_KEY + appWidgetId)
-                .remove(PREF_OPACITY_KEY + appWidgetId)
-                .apply()
+            com.seasonforge.widget.utils.WidgetPrefsManager.deleteWidgetConfig(context, appWidgetId)
         }
 
         fun updateWidget(
@@ -133,8 +108,28 @@ class CountdownWidget : AppWidgetProvider() {
                     val mins = triple?.third ?: 0
 
                     val bgColor = SeasonUtils.getBackgroundColor(theme, opacity, game.color)
+                    val artRes = SeasonUtils.getGameArtResource(game.id)
+                    val cardBgRes = SeasonUtils.getGameCardBackgroundResource(game.id)
 
-                    views.setInt(R.id.widget_countdown_container, "setBackgroundColor", bgColor)
+                    if (theme == "art" && artRes != null) {
+                        val artAlpha = ((100 - opacity.coerceIn(0, 100)) * 255 / 100)
+                        views.setImageViewResource(R.id.img_widget_art_bg, artRes)
+                        views.setInt(R.id.img_widget_art_bg, "setImageAlpha", artAlpha)
+                        views.setViewVisibility(R.id.img_widget_art_bg, android.view.View.VISIBLE)
+                        if (opacity > 0) {
+                            views.setInt(R.id.widget_countdown_container, "setBackgroundColor", bgColor)
+                        } else {
+                            views.setInt(R.id.widget_countdown_container, "setBackgroundResource", cardBgRes)
+                        }
+                    } else {
+                        views.setViewVisibility(R.id.img_widget_art_bg, android.view.View.GONE)
+                        if (opacity != 0) {
+                            views.setInt(R.id.widget_countdown_container, "setBackgroundColor", bgColor)
+                        } else {
+                            views.setInt(R.id.widget_countdown_container, "setBackgroundResource", R.drawable.widget_bg)
+                        }
+                    }
+
                     views.setTextViewText(R.id.tv_game_title, gameTitle.trim())
                     views.setTextViewText(R.id.tv_next_season_title, "${SeasonUtils.getNextSeasonLabel(context)}: $nextSeasonName")
                     views.setTextViewText(R.id.tv_status_badge, SeasonUtils.getUntilStartLabel(context))

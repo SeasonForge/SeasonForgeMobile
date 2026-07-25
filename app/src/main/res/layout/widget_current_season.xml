@@ -1,88 +1,85 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_container"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/widget_bg"
-    android:orientation="vertical"
-    android:padding="14dp">
+    android:background="@drawable/widget_bg">
+
+    <ImageView
+        android:id="@+id/img_widget_art_bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:alpha="0.40"
+        android:scaleType="centerCrop"
+        android:visibility="gone"
+        android:importantForAccessibility="no" />
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="12dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/widget_game_name"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="Path of Exile"
+                android:textColor="#F5C342"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/widget_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:maxLines="1"
+                android:text="Активен"
+                android:textColor="#A0A0B0"
+                android:textSize="11sp" />
+        </LinearLayout>
 
         <TextView
-            android:id="@+id/widget_game_name"
-            android:layout_width="0dp"
+            android:id="@+id/widget_season_name"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="Path of Exile"
-            android:textColor="#F5C342"
-            android:textSize="15sp"
-            android:textStyle="bold"
+            android:layout_marginTop="4dp"
+            android:ellipsize="end"
             android:maxLines="1"
-            android:ellipsize="end" />
+            android:text="Текущий сезон: ..."
+            android:textColor="#FFFFFF"
+            android:textSize="12sp" />
 
-        <TextView
-            android:id="@+id/widget_status"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Активен"
-            android:textColor="#A0A0B0"
-            android:textSize="12sp"
-            android:maxLines="1" />
-    </LinearLayout>
-
-    <TextView
-        android:id="@+id/widget_season_name"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:gravity="center_vertical"
-        android:text="Текущий сезон: ..."
-        android:textColor="#FFFFFF"
-        android:textSize="14sp"
-        android:maxLines="2"
-        android:ellipsize="end" />
-
-    <ProgressBar
-        android:id="@+id/widget_progress_bar"
-        style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="match_parent"
-        android:layout_height="6dp"
-        android:layout_marginTop="6dp"
-        android:layout_marginBottom="6dp"
-        android:progressDrawable="@drawable/widget_progress_style"
-        android:max="100"
-        android:progress="0" />
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical">
+        <ProgressBar
+            android:id="@+id/widget_progress_bar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="5dp"
+            android:layout_marginTop="6dp"
+            android:max="100"
+            android:progress="0"
+            android:progressDrawable="@drawable/widget_progress_style" />
 
         <TextView
             android:id="@+id/widget_next_season"
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="След.: ..."
-            android:textColor="#A0A0B0"
-            android:textSize="12sp"
+            android:layout_marginTop="6dp"
+            android:ellipsize="end"
             android:maxLines="1"
-            android:ellipsize="end" />
+            android:text="След. сезон: ..."
+            android:textColor="#A0A0B0"
+            android:textSize="11sp" />
 
-        <TextView
-            android:id="@+id/widget_progress_text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="0%"
-            android:textColor="#F5C342"
-            android:textSize="12sp"
-            android:textStyle="bold" />
     </LinearLayout>
 
-</LinearLayout>
+</FrameLayout>

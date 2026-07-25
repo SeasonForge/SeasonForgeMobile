@@ -62,57 +62,31 @@ class CurrentSeasonWidget : AppWidgetProvider() {
         const val ACTION_MANUAL_REFRESH = "com.seasonforge.widget.ACTION_MANUAL_REFRESH_CARD"
         const val EXTRA_WIDGET_ID = "com.seasonforge.widget.EXTRA_WIDGET_ID_CARD"
 
-        private const val PREFS_NAME = "com.seasonforge.widget.PREFS"
-        private const val PREF_GAME_ID_KEY = "game_id_"
-        private const val PREF_THEME_KEY = "theme_"
-        private const val PREF_OPACITY_KEY = "opacity_"
-        const val PREF_LAST_SELECTED_GAME = "last_selected_game"
+        const val PREF_LAST_SELECTED_GAME = com.seasonforge.widget.utils.WidgetPrefsManager.PREF_LAST_SELECTED_GAME
         const val EXTRA_TARGET_GAME_ID = "com.seasonforge.widget.EXTRA_TARGET_GAME_ID"
 
         fun saveWidgetTheme(context: Context, appWidgetId: Int, gameId: String, theme: String, opacity: Int) {
-            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .edit()
-                .putString(PREF_GAME_ID_KEY + appWidgetId, gameId)
-                .putString(PREF_THEME_KEY + appWidgetId, theme)
-                .putInt(PREF_OPACITY_KEY + appWidgetId, opacity)
-                .apply()
+            com.seasonforge.widget.utils.WidgetPrefsManager.saveWidgetConfig(context, appWidgetId, gameId, theme, opacity)
         }
 
         fun saveLastSelectedGameId(context: Context, gameId: String) {
-            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .edit()
-                .putString(PREF_LAST_SELECTED_GAME, gameId)
-                .apply()
+            com.seasonforge.widget.utils.WidgetPrefsManager.saveLastSelectedGameId(context, gameId)
         }
 
         fun getGameId(context: Context, appWidgetId: Int): String {
-            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            val saved = prefs.getString(PREF_GAME_ID_KEY + appWidgetId, null)
-            if (!saved.isNullOrEmpty()) return saved
-
-            val lastSelected = prefs.getString(PREF_LAST_SELECTED_GAME, null)
-            if (!lastSelected.isNullOrEmpty()) return lastSelected
-
-            return "path-of-exile"
+            return com.seasonforge.widget.utils.WidgetPrefsManager.getGameId(context, appWidgetId)
         }
 
         fun getWidgetTheme(context: Context, appWidgetId: Int): String {
-            return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .getString(PREF_THEME_KEY + appWidgetId, "dark") ?: "dark"
+            return com.seasonforge.widget.utils.WidgetPrefsManager.getWidgetTheme(context, appWidgetId)
         }
 
         fun getWidgetOpacity(context: Context, appWidgetId: Int): Int {
-            return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .getInt(PREF_OPACITY_KEY + appWidgetId, 15)
+            return com.seasonforge.widget.utils.WidgetPrefsManager.getWidgetOpacity(context, appWidgetId)
         }
 
         fun deleteGameId(context: Context, appWidgetId: Int) {
-            context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .edit()
-                .remove(PREF_GAME_ID_KEY + appWidgetId)
-                .remove(PREF_THEME_KEY + appWidgetId)
-                .remove(PREF_OPACITY_KEY + appWidgetId)
-                .apply()
+            com.seasonforge.widget.utils.WidgetPrefsManager.deleteWidgetConfig(context, appWidgetId)
         }
 
         fun updateWidget(
@@ -137,13 +111,32 @@ class CurrentSeasonWidget : AppWidgetProvider() {
 
                     val progress = SeasonUtils.calculateSeasonProgress(game) ?: 0
                     val bgColor = SeasonUtils.getBackgroundColor(theme, opacity, game.color)
+                    val artRes = SeasonUtils.getGameArtResource(game.id)
+                    val cardBgRes = SeasonUtils.getGameCardBackgroundResource(game.id)
 
-                    mainViews.setInt(R.id.widget_container, "setBackgroundColor", bgColor)
+                    if (theme == "art" && artRes != null) {
+                        val artAlpha = ((100 - opacity.coerceIn(0, 100)) * 255 / 100)
+                        mainViews.setImageViewResource(R.id.img_widget_art_bg, artRes)
+                        mainViews.setInt(R.id.img_widget_art_bg, "setImageAlpha", artAlpha)
+                        mainViews.setViewVisibility(R.id.img_widget_art_bg, android.view.View.VISIBLE)
+                        if (opacity > 0) {
+                            mainViews.setInt(R.id.widget_container, "setBackgroundColor", bgColor)
+                        } else {
+                            mainViews.setInt(R.id.widget_container, "setBackgroundResource", cardBgRes)
+                        }
+                    } else {
+                        mainViews.setViewVisibility(R.id.img_widget_art_bg, android.view.View.GONE)
+                        if (opacity != 0) {
+                            mainViews.setInt(R.id.widget_container, "setBackgroundColor", bgColor)
+                        } else {
+                            mainViews.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.widget_bg)
+                        }
+                    }
+
                     mainViews.setTextViewText(R.id.widget_game_name, gameTitle.trim())
                     mainViews.setTextViewText(R.id.widget_status, statusText)
                     mainViews.setTextViewText(R.id.widget_season_name, "${SeasonUtils.getCurrentSeasonLabel(context)}: $currentSeasonName")
                     mainViews.setProgressBar(R.id.widget_progress_bar, 100, progress, false)
-                    mainViews.setTextViewText(R.id.widget_progress_text, "$progress%")
 
                     val nextSeasonName = game.nextSeason?.name?.get(context)
                     if (!nextSeasonName.isNullOrEmpty()) {
@@ -202,21 +195,19 @@ class WidgetPinReceiver : BroadcastReceiver() {
             ?: intent.getStringExtra("TARGET_GAME_ID")
         val widgetType = intent.getStringExtra("WIDGET_TYPE") ?: "card"
         val theme = intent.getStringExtra("WIDGET_THEME") ?: "dark"
-        val opacity = intent.getIntExtra("WIDGET_OPACITY", 85)
+        val opacity = intent.getIntExtra("WIDGET_OPACITY", 15)
 
         if (appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID && !gameId.isNullOrEmpty()) {
+            com.seasonforge.widget.utils.WidgetPrefsManager.saveWidgetConfig(context, appWidgetId, gameId, theme, opacity)
             val appWidgetManager = AppWidgetManager.getInstance(context)
             when (widgetType) {
                 "countdown" -> {
-                    CountdownWidget.saveWidgetTheme(context, appWidgetId, gameId, theme, opacity)
                     CountdownWidget.updateWidget(context, appWidgetManager, appWidgetId)
                 }
                 "combined" -> {
-                    CombinedWidget.saveWidgetTheme(context, appWidgetId, gameId, theme, opacity)
                     CombinedWidget.updateWidget(context, appWidgetManager, appWidgetId)
                 }
                 else -> {
-                    CurrentSeasonWidget.saveWidgetTheme(context, appWidgetId, gameId, theme, opacity)
                     CurrentSeasonWidget.updateWidget(context, appWidgetManager, appWidgetId)
                 }
             }

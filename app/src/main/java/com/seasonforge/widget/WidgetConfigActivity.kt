@@ -51,12 +51,20 @@ class WidgetConfigActivity : AppCompatActivity() {
                 val appWidgetManager = AppWidgetManager.getInstance(this)
                 val providerInfo = appWidgetManager.getAppWidgetInfo(appWidgetId)
 
-                if (providerInfo?.provider?.className == CountdownWidget::class.java.name) {
-                    CountdownWidget.saveWidgetTheme(this, appWidgetId, selectedGameId, "dark", 85)
-                    CountdownWidget.updateWidget(this, appWidgetManager, appWidgetId)
-                } else {
-                    CurrentSeasonWidget.saveWidgetTheme(this, appWidgetId, selectedGameId, "dark", 85)
-                    CurrentSeasonWidget.updateWidget(this, appWidgetManager, appWidgetId)
+                val className = providerInfo?.provider?.className
+                when (className) {
+                    CountdownWidget::class.java.name -> {
+                        CountdownWidget.saveWidgetTheme(this, appWidgetId, selectedGameId, "art", 15)
+                        CountdownWidget.updateWidget(this, appWidgetManager, appWidgetId)
+                    }
+                    CombinedWidget::class.java.name -> {
+                        CombinedWidget.saveWidgetTheme(this, appWidgetId, selectedGameId, "art", 15)
+                        CombinedWidget.updateWidget(this, appWidgetManager, appWidgetId)
+                    }
+                    else -> {
+                        CurrentSeasonWidget.saveWidgetTheme(this, appWidgetId, selectedGameId, "art", 15)
+                        CurrentSeasonWidget.updateWidget(this, appWidgetManager, appWidgetId)
+                    }
                 }
 
                 val resultValue = Intent()

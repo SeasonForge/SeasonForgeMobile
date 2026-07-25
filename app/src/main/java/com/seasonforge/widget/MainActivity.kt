@@ -11,6 +11,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.SeekBar
@@ -44,13 +45,13 @@ class MainActivity : AppCompatActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
 
-        val btnLang: Button? = findViewById(R.id.btn_change_language)
+        val btnLang: View? = findViewById(R.id.btn_change_language)
         btnLang?.setOnClickListener {
             showLanguageDialog()
         }
         updateLanguageButtonText()
 
-        val btnWebsite: Button? = findViewById(R.id.btn_open_website)
+        val btnWebsite: View? = findViewById(R.id.btn_open_website)
         btnWebsite?.setOnClickListener {
             openWebsiteWithConfirmation("https://seasonforge.online/")
         }
@@ -120,19 +121,19 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateLanguageButtonText() {
-        val btn: Button? = findViewById(R.id.btn_change_language)
-        val btnWebsite: Button? = findViewById(R.id.btn_open_website)
+        val tvSiteLabel: TextView? = findViewById(R.id.tv_header_site_label)
+        val tvLangLabel: TextView? = findViewById(R.id.tv_header_lang_label)
         val tvHint: TextView? = findViewById(R.id.tv_app_hint)
         val prefs = getSharedPreferences("com.seasonforge.widget.PREFS", MODE_PRIVATE)
         val current = prefs.getString("app_language", "auto")
-        btn?.text = when (current) {
-            "ru" -> "🌐 Русский"
-            "en" -> "🌐 English"
-            else -> "🌐 Авто"
-        }
 
         val isRuLang = SeasonUtils.isRu(this)
-        btnWebsite?.text = if (isRuLang) "🌐 Сайт" else "🌐 Website"
+        tvSiteLabel?.text = if (isRuLang) "САЙТ" else "SITE"
+        tvLangLabel?.text = when (current) {
+            "ru" -> "РУС"
+            "en" -> "ENG"
+            else -> if (isRuLang) "АВТО" else "AUTO"
+        }
 
         if (isRuLang) {
             tvHint?.text = "💡 Нажмите на игру для настройки и добавления виджета"
@@ -169,34 +170,65 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showWidgetTypeDialog(game: Game) {
-        val isRu = SeasonUtils.isRu(this)
-        val options = if (isRu) {
-            arrayOf(
-                "📊 Карточка сезона\nТекущий сезон, прогресс и следующий запуск",
-                "⌛ Таймер с 3 плашками\n3 карточки отсчёта: ДНИ | ЧАСЫ | МИНУТЫ",
-                "🔮 Комбинированный (Гибрид)\nПолная сводка текущего сезона + 3 плашки отсчёта"
-            )
-        } else {
-            arrayOf(
-                "📊 Season Card\nCurrent season, progress and next launch",
-                "⌛ Countdown Timer (3 boxes)\n3 countdown boxes: DAYS | HOURS | MINUTES",
-                "🔮 Combined (Hybrid)\nFull current season overview + 3 countdown boxes"
-            )
-        }
-        val displayName = game.name?.get(this) ?: game.id
-        val title = if (isRu) "Выберите тип виджета ($displayName)" else "Select widget type ($displayName)"
+        try {
+            val dialog = BottomSheetDialog(this)
+            val view = layoutInflater.inflate(R.layout.bottom_sheet_widget_type, null)
+            dialog.setContentView(view)
 
-        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-            .setTitle(title)
-            .setItems(options) { _, which ->
-                val type = when (which) {
-                    0 -> "card"
-                    1 -> "countdown"
-                    else -> "combined"
-                }
-                showThemeConfigBottomSheet(game, widgetType = type)
+            val displayName = game.name?.get(this) ?: game.id
+            val isRu = SeasonUtils.isRu(this)
+
+            val tvTitle: TextView? = view.findViewById(R.id.tv_sheet_widget_type_title)
+            val tvSubtitle: TextView? = view.findViewById(R.id.tv_sheet_widget_type_subtitle)
+
+            tvTitle?.text = if (isRu) "Выберите виджет ($displayName)" else "Select Widget ($displayName)"
+            tvSubtitle?.text = if (isRu) "Выберите подходящий формат виджета на ваш экран:" else "Select the format for your home screen:"
+
+            val tvTitleCard: TextView? = view.findViewById(R.id.tv_title_type_card)
+            val tvDescCard: TextView? = view.findViewById(R.id.tv_desc_type_card)
+            val badgeCard: TextView? = view.findViewById(R.id.badge_type_card)
+
+            val tvTitleCountdown: TextView? = view.findViewById(R.id.tv_title_type_countdown)
+            val tvDescCountdown: TextView? = view.findViewById(R.id.tv_desc_type_countdown)
+            val badgeCountdown: TextView? = view.findViewById(R.id.badge_type_countdown)
+
+            val tvTitleCombined: TextView? = view.findViewById(R.id.tv_title_type_combined)
+            val tvDescCombined: TextView? = view.findViewById(R.id.tv_desc_type_combined)
+            val badgeCombined: TextView? = view.findViewById(R.id.badge_type_combined)
+
+            if (!isRu) {
+                tvTitleCard?.text = "Season Card"
+                tvDescCard?.text = "Current season overview, progress bar & status"
+                badgeCard?.text = "Compact"
+
+                tvTitleCountdown?.text = "Countdown Timer"
+                tvDescCountdown?.text = "3 countdown boxes: DAYS | HOURS | MINUTES"
+                badgeCountdown?.text = "3D Countdown"
+
+                tvTitleCombined?.text = "Hybrid Widget"
+                tvDescCombined?.text = "Full current season info + 3 countdown boxes"
+                badgeCombined?.text = "Maximum Info"
             }
-            .show()
+
+            view.findViewById<View>(R.id.btn_select_type_card)?.setOnClickListener {
+                dialog.dismiss()
+                showThemeConfigBottomSheet(game, widgetType = "card")
+            }
+
+            view.findViewById<View>(R.id.btn_select_type_countdown)?.setOnClickListener {
+                dialog.dismiss()
+                showThemeConfigBottomSheet(game, widgetType = "countdown")
+            }
+
+            view.findViewById<View>(R.id.btn_select_type_combined)?.setOnClickListener {
+                dialog.dismiss()
+                showThemeConfigBottomSheet(game, widgetType = "combined")
+            }
+
+            dialog.show()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun showThemeConfigBottomSheet(game: Game, widgetType: String) {
@@ -221,8 +253,10 @@ class MainActivity : AppCompatActivity() {
                 else -> if (isRu) "Карточка сезона" else "Season Card"
             }
             tvTitle?.text = if (isRu) "Настройка темы: $widgetTypeTitle" else "Theme Config: $widgetTypeTitle"
-            tvOpacityLabel?.text = if (isRu) "Прозрачность фона:" else "Background Transparency:"
-            btnConfirm?.text = if (isRu) "➕ Добавить виджет на экран" else "➕ Add Widget to Home Screen"
+            val btnThemeDark: TextView? = view.findViewById(R.id.btn_theme_dark)
+            val btnThemeArt: TextView? = view.findViewById(R.id.btn_theme_art)
+            btnThemeDark?.text = if (isRu) "🖤 Чистый виджет" else "🖤 Clean Widget"
+            btnThemeArt?.text = if (isRu) "🎮 Тема карточки" else "🎮 Card Theme"
 
             val previewLayoutRes = when (widgetType) {
                 "countdown" -> R.layout.widget_countdown
@@ -230,11 +264,14 @@ class MainActivity : AppCompatActivity() {
                 else -> R.layout.widget_current_season
             }
 
+            var selectedTheme = "art"
+            var selectedOpacity = 15
+
             if (cardHolder != null) {
                 val previewView = layoutInflater.inflate(previewLayoutRes, cardHolder, false)
                 previewView.layoutParams = FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
+                    ViewGroup.LayoutParams.MATCH_PARENT
                 )
                 cardHolder.removeAllViews()
                 cardHolder.addView(previewView)
@@ -260,7 +297,7 @@ class MainActivity : AppCompatActivity() {
                 val progress = SeasonUtils.calculateSeasonProgress(game) ?: 0
                 progressBar?.progress = progress
 
-                val progressTextTv: TextView? = previewView.findViewById(R.id.widget_progress_text)
+                val progressTextTv: TextView? = previewView.findViewById(R.id.tv_progress_percent)
                 progressTextTv?.text = "$progress%"
 
                 val nextSeasonName = game.nextSeason?.name?.get(this) ?: "TBA"
@@ -275,15 +312,55 @@ class MainActivity : AppCompatActivity() {
                 val startDateText = if (!startDateStr.isNullOrEmpty() && startDateStr != "TBA") "📅 ${SeasonUtils.getStartLabel(this)}: ${startDateStr.take(10)}" else "📅 ${SeasonUtils.getStartLabel(this)}: TBA"
                 previewView.findViewById<TextView?>(R.id.tv_start_date_footer)?.text = startDateText
 
-                var selectedOpacity = 15
+                val imgArtBg: ImageView? = previewView.findViewById(R.id.img_widget_art_bg)
 
                 seekBarOpacity?.progress = 15
                 tvOpacityValue?.text = "15%"
 
                 fun updateLivePreview() {
-                    val bgColor = SeasonUtils.getBackgroundColor("dark", selectedOpacity, game.color)
-                    previewView.setBackgroundColor(bgColor)
+                    val artRes = SeasonUtils.getGameArtResource(game.id)
+                    val cardBgRes = SeasonUtils.getGameCardBackgroundResource(game.id)
+                    val containerView = previewView.findViewById<View>(R.id.widget_container)
+                        ?: previewView.findViewById<View>(R.id.widget_countdown_container)
+                        ?: previewView.findViewById<View>(R.id.widget_combined_container)
+                        ?: previewView
+
                     tvOpacityValue?.text = "$selectedOpacity%"
+
+                    if (selectedTheme == "art" && artRes != null) {
+                        imgArtBg?.setImageResource(artRes)
+                        imgArtBg?.visibility = View.VISIBLE
+                        val floatAlpha = (100 - selectedOpacity.coerceIn(0, 100)) / 100f
+                        imgArtBg?.alpha = floatAlpha
+                        if (selectedOpacity > 0) {
+                            val bgColor = SeasonUtils.getBackgroundColor(selectedTheme, selectedOpacity, game.color)
+                            containerView.setBackgroundColor(bgColor)
+                        } else {
+                            containerView.setBackgroundResource(cardBgRes)
+                        }
+                        btnThemeArt?.setTextColor(android.graphics.Color.parseColor("#F5C342"))
+                        btnThemeDark?.setTextColor(android.graphics.Color.parseColor("#8A8A9E"))
+                    } else {
+                        imgArtBg?.visibility = View.GONE
+                        if (selectedOpacity != 0) {
+                            val bgColor = SeasonUtils.getBackgroundColor(selectedTheme, selectedOpacity, game.color)
+                            containerView.setBackgroundColor(bgColor)
+                        } else {
+                            containerView.setBackgroundResource(R.drawable.widget_bg)
+                        }
+                        btnThemeDark?.setTextColor(android.graphics.Color.parseColor("#F5C342"))
+                        btnThemeArt?.setTextColor(android.graphics.Color.parseColor("#8A8A9E"))
+                    }
+                }
+
+                btnThemeDark?.setOnClickListener {
+                    selectedTheme = "dark"
+                    updateLivePreview()
+                }
+
+                btnThemeArt?.setOnClickListener {
+                    selectedTheme = "art"
+                    updateLivePreview()
                 }
 
                 seekBarOpacity?.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -296,11 +373,11 @@ class MainActivity : AppCompatActivity() {
                 })
 
                 updateLivePreview()
+            }
 
-                btnConfirm?.setOnClickListener {
-                    dialog.dismiss()
-                    requestPinWidget(game, widgetType, "dark", selectedOpacity)
-                }
+            btnConfirm?.setOnClickListener {
+                dialog.dismiss()
+                requestPinWidget(game, widgetType, selectedTheme, selectedOpacity)
             }
 
             dialog.show()
@@ -320,6 +397,7 @@ class MainActivity : AppCompatActivity() {
         val widgetComponent = ComponentName(this, targetClass)
 
         CurrentSeasonWidget.saveLastSelectedGameId(this, game.id)
+        com.seasonforge.widget.utils.WidgetPrefsManager.savePendingConfig(this, game.id, theme, opacity)
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && appWidgetManager.isRequestPinAppWidgetSupported) {
             val successCallback = Intent(this, WidgetPinReceiver::class.java).apply {
@@ -448,6 +526,8 @@ class GameAdapter(
         itemView: View,
         private val onItemClick: (Game) -> Unit
     ) : RecyclerView.ViewHolder(itemView) {
+        private val cardRootContainer: View? = itemView.findViewById(R.id.card_root_container)
+        private val imgGameArtBg: ImageView? = itemView.findViewById(R.id.img_game_art_bg)
         private val tvTitle: TextView = itemView.findViewById(R.id.tv_game_title)
         private val tvStatus: TextView = itemView.findViewById(R.id.tv_game_status)
         private val tvCurrentSeason: TextView = itemView.findViewById(R.id.tv_current_season)
@@ -460,6 +540,34 @@ class GameAdapter(
 
         fun bind(game: Game) {
             val context = itemView.context
+
+            // Apply card border theme
+            val bgDrawableRes = when (game.id) {
+                "path-of-exile" -> R.drawable.item_card_bg_poe1
+                "path-of-exile-2" -> R.drawable.item_card_bg_poe2
+                "diablo-iv" -> R.drawable.item_card_bg_diablo
+                "last-epoch" -> R.drawable.item_card_bg_lastepoch
+                else -> R.drawable.item_card_bg_torchlight
+            }
+            cardRootContainer?.setBackgroundResource(bgDrawableRes)
+
+            // Set artwork image for each game
+            val artDrawableRes = when (game.id) {
+                "path-of-exile" -> R.drawable.bg_poe_1
+                "path-of-exile-2" -> R.drawable.bg_poe_2
+                "diablo-iv" -> R.drawable.bg_diablo_iv
+                "last-epoch" -> R.drawable.bg_last_epoch
+                "torchlight-infinite" -> R.drawable.bg_torchlight
+                else -> null
+            }
+
+            if (artDrawableRes != null) {
+                imgGameArtBg?.setImageResource(artDrawableRes)
+                imgGameArtBg?.visibility = View.VISIBLE
+            } else {
+                imgGameArtBg?.visibility = View.GONE
+            }
+
             val title = "${game.icon ?: ""} ${game.name?.get(context) ?: game.id}"
             tvTitle.text = title.trim()
             tvStatus.text = game.status?.label?.get(context) ?: ""

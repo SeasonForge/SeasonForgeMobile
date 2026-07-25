@@ -6,10 +6,12 @@ import android.content.ComponentName
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.Chronometer
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -305,9 +307,26 @@ class MainActivity : AppCompatActivity() {
 
                 val startDateStr = game.nextSeason?.startDate
                 val triple = SeasonUtils.getCountdownTriple(startDateStr)
-                previewView.findViewById<TextView?>(R.id.tv_box_days_val)?.text = "${triple?.first ?: 0}"
-                previewView.findViewById<TextView?>(R.id.tv_box_hours_val)?.text = "${triple?.second ?: 0}"
-                previewView.findViewById<TextView?>(R.id.tv_box_mins_val)?.text = "${triple?.third ?: 0}"
+                val days = triple?.first ?: 0
+                val hours = triple?.second ?: 0
+                previewView.findViewById<TextView?>(R.id.tv_box_days_val)?.text = "$days"
+                previewView.findViewById<TextView?>(R.id.tv_box_hours_val)?.text = "${hours % 24}"
+
+                val chronometer = previewView.findViewById<Chronometer?>(R.id.chronometer_countdown)
+                if (chronometer != null && !startDateStr.isNullOrEmpty()) {
+                    val targetInstant = SeasonUtils.parseIsoDate(startDateStr)
+                    val targetMillis = targetInstant?.toEpochMilli() ?: 0L
+                    val nowMillis = System.currentTimeMillis()
+                    if (targetMillis > nowMillis) {
+                        val millisLeftInHour = (targetMillis - nowMillis) % (3600 * 1000L)
+                        val elapsedRealtimeTargetHour = SystemClock.elapsedRealtime() + millisLeftInHour
+                        chronometer.base = elapsedRealtimeTargetHour
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                            chronometer.isCountDown = true
+                        }
+                        chronometer.start()
+                    }
+                }
 
                 val startDateText = if (!startDateStr.isNullOrEmpty() && startDateStr != "TBA") "📅 ${SeasonUtils.getStartLabel(this)}: ${startDateStr.take(10)}" else "📅 ${SeasonUtils.getStartLabel(this)}: TBA"
                 previewView.findViewById<TextView?>(R.id.tv_start_date_footer)?.text = startDateText

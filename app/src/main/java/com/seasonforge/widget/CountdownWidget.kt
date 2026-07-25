@@ -3,8 +3,11 @@ package com.seasonforge.widget
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Build
+import android.os.SystemClock
 import android.widget.RemoteViews
 import com.seasonforge.widget.data.SeasonRepository
 import com.seasonforge.widget.utils.SeasonAlarmScheduler
@@ -21,13 +24,13 @@ class CountdownWidget : AppWidgetProvider() {
         if (action == ACTION_SMART_UPDATE || action == ACTION_MANUAL_REFRESH || action == AppWidgetManager.ACTION_APPWIDGET_UPDATE) {
             val appWidgetId = intent.getIntExtra(EXTRA_WIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
             val appWidgetIds = intent.getIntArrayExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS)
-            val targetIds = if (appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
-                intArrayOf(appWidgetId)
-            } else {
-                appWidgetIds
+            val targetIds = when {
+                appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID -> intArrayOf(appWidgetId)
+                appWidgetIds != null && appWidgetIds.isNotEmpty() -> appWidgetIds
+                else -> AppWidgetManager.getInstance(context).getAppWidgetIds(ComponentName(context, CountdownWidget::class.java))
             }
 
-            if (targetIds != null && targetIds.isNotEmpty()) {
+            if (targetIds.isNotEmpty()) {
                 val appWidgetManager = AppWidgetManager.getInstance(context)
                 if (action == ACTION_MANUAL_REFRESH || action == AppWidgetManager.ACTION_APPWIDGET_UPDATE) {
                     for (id in targetIds) {
@@ -133,12 +136,26 @@ class CountdownWidget : AppWidgetProvider() {
                     views.setTextViewText(R.id.tv_game_title, gameTitle.trim())
                     views.setTextViewText(R.id.tv_next_season_title, "${SeasonUtils.getNextSeasonLabel(context)}: $nextSeasonName")
                     views.setTextViewText(R.id.tv_status_badge, SeasonUtils.getUntilStartLabel(context))
-                    views.setTextViewText(R.id.tv_box_days_val, "$days")
-                    views.setTextViewText(R.id.tv_box_hours_val, "$hours")
-                    views.setTextViewText(R.id.tv_box_mins_val, "$mins")
                     views.setTextViewText(R.id.tv_box_days_label, SeasonUtils.getDaysLabel(context))
                     views.setTextViewText(R.id.tv_box_hours_label, SeasonUtils.getHoursLabel(context))
-                    views.setTextViewText(R.id.tv_box_mins_label, SeasonUtils.getMinsLabel(context))
+                    views.setTextViewText(R.id.tv_box_days_val, "$days")
+                    views.setTextViewText(R.id.tv_box_hours_val, "${hours % 24}")
+
+                    val targetInstant = SeasonUtils.parseIsoDate(startDateStr)
+                    val targetMillis = targetInstant?.toEpochMilli() ?: 0L
+                    val nowMillis = System.currentTimeMillis()
+
+                    if (targetMillis > nowMillis) {
+                        val millisLeftInHour = (targetMillis - nowMillis) % (3600 * 1000L)
+                        val elapsedRealtimeTargetHour = SystemClock.elapsedRealtime() + millisLeftInHour
+                        views.setChronometer(R.id.chronometer_countdown, elapsedRealtimeTargetHour, null, true)
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                            views.setChronometerCountDown(R.id.chronometer_countdown, true)
+                        }
+                    } else {
+                        views.setTextViewText(R.id.tv_box_days_val, "0")
+                        views.setTextViewText(R.id.tv_box_hours_val, "0")
+                    }
 
                     val footerText = if (startDateStr.isNotEmpty() && startDateStr != "TBA") {
                         val formattedDate = startDateStr.take(10)
@@ -171,9 +188,11 @@ class CountdownWidget : AppWidgetProvider() {
                     context,
                     appWidgetId,
                     refreshIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
                 views.setOnClickPendingIntent(R.id.widget_countdown_container, pendingIntent)
+                views.setOnClickPendingIntent(R.id.chronometer_countdown, pendingIntent)
+                views.setOnClickPendingIntent(R.id.timer_boxes_layout, pendingIntent)
 
                 appWidgetManager.updateAppWidget(appWidgetId, views)
             }

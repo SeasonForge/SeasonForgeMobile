@@ -4,6 +4,7 @@ import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
@@ -22,13 +23,13 @@ class CurrentSeasonWidget : AppWidgetProvider() {
         if (action == ACTION_MANUAL_REFRESH || action == AppWidgetManager.ACTION_APPWIDGET_UPDATE) {
             val appWidgetId = intent.getIntExtra(EXTRA_WIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
             val appWidgetIds = intent.getIntArrayExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS)
-            val targetIds = if (appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID) {
-                intArrayOf(appWidgetId)
-            } else {
-                appWidgetIds
+            val targetIds = when {
+                appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID -> intArrayOf(appWidgetId)
+                appWidgetIds != null && appWidgetIds.isNotEmpty() -> appWidgetIds
+                else -> AppWidgetManager.getInstance(context).getAppWidgetIds(ComponentName(context, CurrentSeasonWidget::class.java))
             }
 
-            if (targetIds != null && targetIds.isNotEmpty()) {
+            if (targetIds.isNotEmpty()) {
                 val appWidgetManager = AppWidgetManager.getInstance(context)
                 if (action == ACTION_MANUAL_REFRESH || action == AppWidgetManager.ACTION_APPWIDGET_UPDATE) {
                     for (id in targetIds) {

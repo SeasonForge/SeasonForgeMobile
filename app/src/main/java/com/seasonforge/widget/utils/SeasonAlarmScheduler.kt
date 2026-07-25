@@ -24,28 +24,21 @@ object SeasonAlarmScheduler {
         val targetInstant = SeasonUtils.parseIsoDate(game?.nextSeason?.startDate) ?: return
 
         val now = Instant.now()
-        if (now.isAfter(targetInstant)) return // Season already started
+        val targetMillis = targetInstant.toEpochMilli()
+        val nowMillis = System.currentTimeMillis()
 
-        val secondsLeft = now.until(targetInstant, ChronoUnit.SECONDS)
-
-        // Determine next update time based on remaining time
-        val nextUpdateMillis = when {
-            secondsLeft > 86400 -> {
-                // > 1 day: update in 6 hours
-                System.currentTimeMillis() + 6 * 3600 * 1000L
+        // 12 hours update interval (43,200,000 ms)
+        val twelveHoursMillis = 12 * 3600 * 1000L
+        val nextUpdateMillis = if (now.isBefore(targetInstant)) {
+            val millisLeft = targetMillis - nowMillis
+            if (millisLeft in 1..twelveHoursMillis) {
+                // If season starts in less than 12 hours, schedule exact alarm at start time
+                targetMillis
+            } else {
+                nowMillis + twelveHoursMillis
             }
-            secondsLeft > 3600 -> {
-                // > 1 hour: update in 1 hour
-                System.currentTimeMillis() + 3600 * 1000L
-            }
-            secondsLeft > 300 -> {
-                // > 5 minutes: update in 5 minutes
-                System.currentTimeMillis() + 300 * 1000L
-            }
-            else -> {
-                // < 5 minutes: update every 1 minute
-                System.currentTimeMillis() + 60 * 1000L
-            }
+        } else {
+            nowMillis + twelveHoursMillis
         }
 
         val intent = Intent(context, targetClass).apply {

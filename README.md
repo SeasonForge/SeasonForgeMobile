@@ -1,6 +1,10 @@
 # ⚡ SeasonForge Mobile
 
+[![Download Latest Release](https://img.shields.io/github/v/release/SeasonForge/SeasonForgeMobile?label=Download%20APK&color=3B82F6)](https://github.com/SeasonForge/SeasonForgeMobile/releases/latest)
+
 Мобильное Android-приложение и информативные виджеты рабочего стола для отслеживания старта и прогресса сезонов в ARPG играх (**Path of Exile 1 & 2**, **Diablo IV**, **Last Epoch**, **Torchlight: Infinite**).
+
+[⬇️ **Скачать последнюю версию (APK)**](https://github.com/SeasonForge/SeasonForgeMobile/releases/latest)
 
 ---
 
@@ -35,7 +39,7 @@
 
 1. Клонировать репозиторий:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/SeasonForgeMobile.git
+   git clone https://github.com/SeasonForge/SeasonForgeMobile.git
    ```
 2. Открыть проект в **Android Studio**.
 3. Скомпилировать и запустить:

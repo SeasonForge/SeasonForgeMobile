@@ -42,6 +42,20 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         supportActionBar?.hide()
+        
+        // Match system status bar & navigation bar with deep dark theme background #0A0C14
+        window.statusBarColor = android.graphics.Color.parseColor("#0A0C14")
+        window.navigationBarColor = android.graphics.Color.parseColor("#0A0C14")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.insetsController?.setSystemBarsAppearance(
+                0,
+                android.view.WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
+            )
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            @Suppress("DEPRECATION")
+            window.decorView.systemUiVisibility = window.decorView.systemUiVisibility and android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR.inv()
+        }
+
         setContentView(R.layout.activity_main)
 
         recyclerView = findViewById(R.id.rv_games)

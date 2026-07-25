@@ -4,24 +4,42 @@
 
 Мобильное Android-приложение и информативные виджеты рабочего стола для отслеживания старта и прогресса сезонов в ARPG играх (**Path of Exile 1 & 2**, **Diablo IV**, **Last Epoch**, **Torchlight: Infinite**).
 
-[⬇️ **Скачать последнюю версию (APK)**](https://github.com/SeasonForge/SeasonForgeMobile/releases/latest)
+[⬇️ **Download Latest Version / Скачать последнюю версию (APK)**](https://github.com/SeasonForge/SeasonForgeMobile/releases/latest)
 
 ---
 
-## 🚀 Возможности приложения
+## 🖼️ Screenshots / Скриншоты
 
-* **📊 3 типа виджетов на рабочий стол**:
-  * **Карточка сезона** — прогресс текущей лиги и следующий запуск.
-  * **Таймер (3D)** — 3 независимые плашки отсчёта (`ДНИ | ЧАСЫ | МИНУТЫ`).
-  * **Гибридный (Комбинированный)** — полная сводка текущей лиги + отсчёт времени до следующей.
-* **🔔 Локальные Push-уведомления**:
-  * Настройка гибких напоминаний о старте сезонов (за 1 час, за 24 часа, за 3 дня, за 1 неделю, в момент старта).
-* **🌐 Двуязычная локализация (RU / EN)**:
-  * Переключение языка в интерфейсе и автоматическая подстройка под систему.
-* **🎨 Настройка прозрачности виджетов**:
-  * Индивидуальная регулировка прозрачности элементов виджета для любого фона рабочего стола.
-* **⚡ Мгновенный отклик при тапе**:
-  * Быстрое обновление данных и статус-индикация на виджете.
+<p align="center">
+  <img src="https://raw.githubusercontent.com/SeasonForge/SeasonForgeMobile/main/docs/screenshots/screen_widgets.jpg" width="31%" alt="Home Screen Widgets" />
+  <img src="https://raw.githubusercontent.com/SeasonForge/SeasonForgeMobile/main/docs/screenshots/screen_main.jpg" width="31%" alt="Main App Screen" />
+  <img src="https://raw.githubusercontent.com/SeasonForge/SeasonForgeMobile/main/docs/screenshots/screen_select_widget.jpg" width="31%" alt="Select Widget Dialog" />
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/SeasonForge/SeasonForgeMobile/main/docs/screenshots/screen_theme_config.jpg" width="31%" alt="Widget Theme Config" />
+  <img src="https://raw.githubusercontent.com/SeasonForge/SeasonForgeMobile/main/docs/screenshots/screen_reminders.jpg" width="31%" alt="Reminder Setup" />
+</p>
+
+---
+
+## 🛡️ Installation Warning / Google Play Protect
+
+> **EN**: Since SeasonForge is distributed directly as an APK via GitHub, Google Play Protect may show an "Unrecognized Developer" warning.
+> **To install**: Tap **"More details"** -> Tap **"Install anyway"**.
+
+> **RU**: Так как приложение устанавливается напрямую через APK файл с GitHub, Google Play Protect может выдать предупреждение.
+> **Для установки**: Нажмите **«Подробнее»** -> Нажмите **«Всё равно установить»**.
+
+---
+
+## 🚀 Features / Возможности приложения
+
+* **⏱️ Live Home Screen Widgets**: 3 customizable widget types with real-time second-by-second countdown powered by native Chronometer with zero battery drain.
+* **🎮 ARPG & MMO Game Tracking**: PoE 1 & 2, Diablo IV, Last Epoch, Torchlight: Infinite, and more.
+* **🔔 Custom Reminders**: Notifications 1 week, 3 days, 24 hours, 1 hour before launch, or right at start.
+* **🎨 Customization**: Adjust widget transparency, background themes, and game card art.
+* **🌐 Bilingual**: English and Russian interface localization.
 
 ---
 

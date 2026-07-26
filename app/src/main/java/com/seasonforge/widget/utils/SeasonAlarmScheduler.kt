@@ -27,16 +27,15 @@ object SeasonAlarmScheduler {
         val targetMillis = targetInstant.toEpochMilli()
         val nowMillis = System.currentTimeMillis()
 
-        // 12 hours update interval (43,200,000 ms)
         val twelveHoursMillis = 12 * 3600 * 1000L
         val nextUpdateMillis = if (now.isBefore(targetInstant)) {
-            val millisLeft = targetMillis - nowMillis
-            if (millisLeft in 1..twelveHoursMillis) {
-                // If season starts in less than 12 hours, schedule exact alarm at start time
-                targetMillis
-            } else {
-                nowMillis + twelveHoursMillis
+            val totalMillisLeft = targetMillis - nowMillis
+            var millisLeftInHour = totalMillisLeft % (3600 * 1000L)
+            if (millisLeftInHour <= 0L) {
+                millisLeftInHour = 3600 * 1000L
             }
+            val nextHourlyUpdate = nowMillis + millisLeftInHour + 1000L
+            if (nextHourlyUpdate < targetMillis) nextHourlyUpdate else targetMillis
         } else {
             nowMillis + twelveHoursMillis
         }
@@ -55,14 +54,22 @@ object SeasonAlarmScheduler {
 
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                alarmManager.setAndAllowWhileIdle(
-                    AlarmManager.RTC,
-                    nextUpdateMillis,
-                    pendingIntent
-                )
+                try {
+                    alarmManager.setExactAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        nextUpdateMillis,
+                        pendingIntent
+                    )
+                } catch (e: SecurityException) {
+                    alarmManager.setAndAllowWhileIdle(
+                        AlarmManager.RTC_WAKEUP,
+                        nextUpdateMillis,
+                        pendingIntent
+                    )
+                }
             } else {
-                alarmManager.set(
-                    AlarmManager.RTC,
+                alarmManager.setExact(
+                    AlarmManager.RTC_WAKEUP,
                     nextUpdateMillis,
                     pendingIntent
                 )

@@ -74,6 +74,42 @@ class MainActivity : AppCompatActivity() {
         }
 
         loadData()
+        checkAppUpdate()
+    }
+
+    private fun checkAppUpdate() {
+        com.seasonforge.widget.utils.AppUpdateManager.checkForUpdate(this, forceCheck = false) { releaseInfo ->
+            if (releaseInfo != null && releaseInfo.isNewer) {
+                showUpdateDialog(releaseInfo)
+            }
+        }
+    }
+
+    private fun showUpdateDialog(releaseInfo: com.seasonforge.widget.utils.ReleaseInfo) {
+        val isRu = SeasonUtils.isRu(this)
+        val title = if (isRu) "🚀 Доступно обновление v${releaseInfo.tagName}" else "🚀 New Update Available v${releaseInfo.tagName}"
+
+        val notes = if (releaseInfo.releaseNotes.isNotBlank()) {
+            "\n\n${releaseInfo.releaseNotes}"
+        } else ""
+
+        val message = if (isRu) {
+            "Вышла новая версия приложения SeasonForge! Хотите обновить сейчас?$notes"
+        } else {
+            "A new version of SeasonForge is available! Would you like to update now?$notes"
+        }
+
+        val positiveBtn = if (isRu) "Обновить" else "Update"
+        val negativeBtn = if (isRu) "Позже" else "Later"
+
+        com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton(positiveBtn) { _, _ ->
+                com.seasonforge.widget.utils.AppUpdateManager.downloadAndInstallApk(this, releaseInfo)
+            }
+            .setNegativeButton(negativeBtn, null)
+            .show()
     }
 
     fun openWebsiteWithConfirmation(url: String, gameName: String? = null) {

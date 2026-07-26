@@ -36,3 +36,16 @@
    - какие файлы изменены;
    - краткое описание изменений;
    - результат проверок.
+
+11. **Окружение JDK и сборка Gradle**:
+   - В `gradle.properties` прямо прописан путь к совместимому JDK 17 (`org.gradle.java.home=D:/project/jdk-17.0.10+7`).
+   - Не ищите JDK на диске и не проверяйте версии Java — команды `.\gradlew.bat compileDebugKotlin` и `.\gradlew.bat assembleDebug` сразу работают из коробки.
+
+12. **Процедура публикации релиза («пушим в релиз»)**:
+   - При фразе «пушим в релиз»:
+     1. Собрать подписанный APK: `.\gradlew.bat assembleRelease`.
+     2. Скопировать/переименовать релизный APK в `SeasonForge-v<versionName>.apk` (например, `SeasonForge-v2.7.0.apk`).
+     3. Выполнить коммит и пуш изменений в Git репозиторий.
+     4. Опубликовать релиз на GitHub Releases для `SeasonForge/SeasonForgeMobile` с тегом `v<versionName>` и прикрепить `SeasonForge-v<versionName>.apk` в секцию Assets.
+
+

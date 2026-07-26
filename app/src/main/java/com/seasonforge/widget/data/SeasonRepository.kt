@@ -47,7 +47,7 @@ class SeasonRepository(private val context: Context? = null) {
             ?.apply()
     }
 
-    private fun getFromCache(): SeasonResponse? {
+    fun getFromCache(): SeasonResponse? {
         val cachedJson = context?.getSharedPreferences("com.seasonforge.widget.CACHE", Context.MODE_PRIVATE)
             ?.getString("cached_seasons_json", null) ?: return null
         return try {

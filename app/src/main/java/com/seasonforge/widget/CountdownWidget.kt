@@ -21,7 +21,7 @@ class CountdownWidget : AppWidgetProvider() {
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         val action = intent.action
-        if (action == ACTION_SMART_UPDATE || action == ACTION_MANUAL_REFRESH || action == AppWidgetManager.ACTION_APPWIDGET_UPDATE) {
+        if (action == ACTION_SMART_UPDATE || action == ACTION_MANUAL_REFRESH || action == AppWidgetManager.ACTION_APPWIDGET_UPDATE || action == Intent.ACTION_USER_PRESENT) {
             val appWidgetId = intent.getIntExtra(EXTRA_WIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
             val appWidgetIds = intent.getIntArrayExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS)
             val targetIds = when {
@@ -32,7 +32,7 @@ class CountdownWidget : AppWidgetProvider() {
 
             if (targetIds.isNotEmpty()) {
                 val appWidgetManager = AppWidgetManager.getInstance(context)
-                if (action == ACTION_MANUAL_REFRESH || action == AppWidgetManager.ACTION_APPWIDGET_UPDATE) {
+                if (action == ACTION_MANUAL_REFRESH) {
                     for (id in targetIds) {
                         if (id != AppWidgetManager.INVALID_APPWIDGET_ID) {
                             val quickViews = RemoteViews(context.packageName, R.layout.widget_countdown)
@@ -96,106 +96,132 @@ class CountdownWidget : AppWidgetProvider() {
 
             CoroutineScope(Dispatchers.IO).launch {
                 val repository = SeasonRepository(context)
+
+                // 1. Fast local render from cache for 0ms UI response
+                val cachedGame = repository.getFromCache()?.games?.find { it.id == gameId }
+                if (cachedGame != null) {
+                    renderWidget(context, appWidgetManager, appWidgetId, cachedGame, theme, opacity)
+                }
+
+                // 2. Network fetch for updated data
                 val response = repository.fetchSeasons()
-                val game = response?.games?.find { it.id == gameId }
-
-                val views = RemoteViews(context.packageName, R.layout.widget_countdown)
-                if (game != null) {
-                    val gameTitle = "${game.icon ?: ""} ${game.name?.get(context) ?: game.id}"
-                    val nextSeasonName = game.nextSeason?.name?.get(context) ?: "TBA"
-                    val startDateStr = game.nextSeason?.startDate ?: ""
-
-                    val triple = SeasonUtils.getCountdownTriple(startDateStr)
-                    val days = triple?.first ?: 0
-                    val hours = triple?.second ?: 0
-                    val mins = triple?.third ?: 0
-
-                    val bgColor = SeasonUtils.getBackgroundColor(theme, opacity, game.color)
-                    val artRes = SeasonUtils.getGameArtResource(game.id)
-                    val cardBgRes = SeasonUtils.getGameCardBackgroundResource(game.id)
-
-                    if (theme == "art" && artRes != null) {
-                        val artAlpha = ((100 - opacity.coerceIn(0, 100)) * 255 / 100)
-                        views.setImageViewResource(R.id.img_widget_art_bg, artRes)
-                        views.setInt(R.id.img_widget_art_bg, "setImageAlpha", artAlpha)
-                        views.setViewVisibility(R.id.img_widget_art_bg, android.view.View.VISIBLE)
-                        if (opacity > 0) {
-                            views.setInt(R.id.widget_countdown_container, "setBackgroundColor", bgColor)
-                        } else {
-                            views.setInt(R.id.widget_countdown_container, "setBackgroundResource", cardBgRes)
-                        }
-                    } else {
-                        views.setViewVisibility(R.id.img_widget_art_bg, android.view.View.GONE)
-                        if (opacity != 0) {
-                            views.setInt(R.id.widget_countdown_container, "setBackgroundColor", bgColor)
-                        } else {
-                            views.setInt(R.id.widget_countdown_container, "setBackgroundResource", R.drawable.widget_bg)
-                        }
-                    }
-
-                    views.setTextViewText(R.id.tv_game_title, gameTitle.trim())
-                    views.setTextViewText(R.id.tv_next_season_title, "${SeasonUtils.getNextSeasonLabel(context)}: $nextSeasonName")
-                    views.setTextViewText(R.id.tv_status_badge, SeasonUtils.getUntilStartLabel(context))
-                    views.setTextViewText(R.id.tv_box_days_label, SeasonUtils.getDaysLabel(context))
-                    views.setTextViewText(R.id.tv_box_hours_label, SeasonUtils.getHoursLabel(context))
-                    views.setTextViewText(R.id.tv_box_days_val, "$days")
-                    views.setTextViewText(R.id.tv_box_hours_val, "${hours % 24}")
-
-                    val targetInstant = SeasonUtils.parseIsoDate(startDateStr)
-                    val targetMillis = targetInstant?.toEpochMilli() ?: 0L
-                    val nowMillis = System.currentTimeMillis()
-
-                    if (targetMillis > nowMillis) {
-                        val millisLeftInHour = (targetMillis - nowMillis) % (3600 * 1000L)
-                        val elapsedRealtimeTargetHour = SystemClock.elapsedRealtime() + millisLeftInHour
-                        views.setChronometer(R.id.chronometer_countdown, elapsedRealtimeTargetHour, null, true)
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                            views.setChronometerCountDown(R.id.chronometer_countdown, true)
-                        }
-                    } else {
-                        views.setTextViewText(R.id.tv_box_days_val, "0")
-                        views.setTextViewText(R.id.tv_box_hours_val, "0")
-                    }
-
-                    val footerText = if (startDateStr.isNotEmpty() && startDateStr != "TBA") {
-                        val formattedDate = startDateStr.take(10)
-                        "📅 ${SeasonUtils.getStartLabel(context)}: $formattedDate"
-                    } else {
-                        "📅 ${SeasonUtils.getStartLabel(context)}: TBA"
-                    }
-                    views.setTextViewText(R.id.tv_start_date_footer, footerText)
-
-                    // Schedule next energy-efficient update
-                    SeasonAlarmScheduler.scheduleNextUpdate(
-                        context,
-                        appWidgetId,
-                        game,
-                        CountdownWidget::class.java,
-                        ACTION_SMART_UPDATE,
-                        EXTRA_WIDGET_ID
-                    )
-                } else {
+                val freshGame = response?.games?.find { it.id == gameId }
+                if (freshGame != null) {
+                    renderWidget(context, appWidgetManager, appWidgetId, freshGame, theme, opacity)
+                } else if (cachedGame == null) {
+                    val views = RemoteViews(context.packageName, R.layout.widget_countdown)
                     views.setTextViewText(R.id.tv_status_badge, SeasonUtils.getDataUnavailableText(context))
+                    appWidgetManager.updateAppWidget(appWidgetId, views)
                 }
-
-                // Click Intent for manual refresh
-                val refreshIntent = Intent(context, CountdownWidget::class.java).apply {
-                    action = ACTION_MANUAL_REFRESH
-                    putExtra(EXTRA_WIDGET_ID, appWidgetId)
-                    setPackage(context.packageName)
-                }
-                val pendingIntent = PendingIntent.getBroadcast(
-                    context,
-                    appWidgetId,
-                    refreshIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                views.setOnClickPendingIntent(R.id.widget_countdown_container, pendingIntent)
-                views.setOnClickPendingIntent(R.id.chronometer_countdown, pendingIntent)
-                views.setOnClickPendingIntent(R.id.timer_boxes_layout, pendingIntent)
-
-                appWidgetManager.updateAppWidget(appWidgetId, views)
             }
+        }
+
+        private fun renderWidget(
+            context: Context,
+            appWidgetManager: AppWidgetManager,
+            appWidgetId: Int,
+            game: com.seasonforge.widget.models.Game,
+            theme: String,
+            opacity: Int
+        ) {
+            val views = RemoteViews(context.packageName, R.layout.widget_countdown)
+            val gameTitle = "${game.icon ?: ""} ${game.name?.get(context) ?: game.id}"
+            val nextSeasonName = game.nextSeason?.name?.get(context) ?: "TBA"
+            val startDateStr = game.nextSeason?.startDate ?: ""
+
+            val triple = SeasonUtils.getCountdownTriple(startDateStr)
+            val days = triple?.first ?: 0
+            val hours = triple?.second ?: 0
+
+            val bgColor = SeasonUtils.getBackgroundColor(theme, opacity, game.color)
+            val artRes = SeasonUtils.getGameArtResource(game.id)
+            val cardBgRes = SeasonUtils.getGameCardBackgroundResource(game.id)
+
+            if (theme == "art" && artRes != null) {
+                val artAlpha = ((100 - opacity.coerceIn(0, 100)) * 255 / 100)
+                views.setImageViewResource(R.id.img_widget_art_bg, artRes)
+                views.setInt(R.id.img_widget_art_bg, "setImageAlpha", artAlpha)
+                views.setViewVisibility(R.id.img_widget_art_bg, android.view.View.VISIBLE)
+                if (opacity > 0) {
+                    views.setInt(R.id.widget_countdown_container, "setBackgroundColor", bgColor)
+                } else {
+                    views.setInt(R.id.widget_countdown_container, "setBackgroundResource", cardBgRes)
+                }
+            } else {
+                views.setViewVisibility(R.id.img_widget_art_bg, android.view.View.GONE)
+                if (opacity != 0) {
+                    views.setInt(R.id.widget_countdown_container, "setBackgroundColor", bgColor)
+                } else {
+                    views.setInt(R.id.widget_countdown_container, "setBackgroundResource", R.drawable.widget_bg)
+                }
+            }
+
+            views.setTextViewText(R.id.tv_game_title, gameTitle.trim())
+            views.setTextViewText(R.id.tv_next_season_title, "${SeasonUtils.getNextSeasonLabel(context)}: $nextSeasonName")
+            views.setTextViewText(R.id.tv_status_badge, SeasonUtils.getUntilStartLabel(context))
+            views.setTextViewText(R.id.tv_box_days_label, SeasonUtils.getDaysLabel(context))
+            views.setTextViewText(R.id.tv_box_hours_label, SeasonUtils.getHoursLabel(context))
+            views.setTextViewText(R.id.tv_box_days_val, "$days")
+            views.setTextViewText(R.id.tv_box_hours_val, "${hours % 24}")
+
+            val targetInstant = SeasonUtils.parseIsoDate(startDateStr)
+            val targetMillis = targetInstant?.toEpochMilli() ?: 0L
+            val nowMillis = System.currentTimeMillis()
+
+            if (targetMillis > nowMillis) {
+                var millisLeftInHour = (targetMillis - nowMillis) % (3600 * 1000L)
+                if (millisLeftInHour <= 0L) {
+                    millisLeftInHour = 3600 * 1000L
+                }
+                val elapsedRealtimeTargetHour = SystemClock.elapsedRealtime() + millisLeftInHour
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    views.setChronometerCountDown(R.id.chronometer_countdown, true)
+                }
+                views.setChronometer(R.id.chronometer_countdown, elapsedRealtimeTargetHour, null, true)
+            } else {
+                views.setTextViewText(R.id.tv_box_days_val, "0")
+                views.setTextViewText(R.id.tv_box_hours_val, "0")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    views.setChronometerCountDown(R.id.chronometer_countdown, false)
+                }
+                views.setChronometer(R.id.chronometer_countdown, SystemClock.elapsedRealtime(), null, false)
+            }
+
+            val footerText = if (startDateStr.isNotEmpty() && startDateStr != "TBA") {
+                val formattedDate = startDateStr.take(10)
+                "📅 ${SeasonUtils.getStartLabel(context)}: $formattedDate"
+            } else {
+                "📅 ${SeasonUtils.getStartLabel(context)}: TBA"
+            }
+            views.setTextViewText(R.id.tv_start_date_footer, footerText)
+
+            // Schedule next energy-efficient update
+            SeasonAlarmScheduler.scheduleNextUpdate(
+                context,
+                appWidgetId,
+                game,
+                CountdownWidget::class.java,
+                ACTION_SMART_UPDATE,
+                EXTRA_WIDGET_ID
+            )
+
+            // Click Intent for manual refresh
+            val refreshIntent = Intent(context, CountdownWidget::class.java).apply {
+                action = ACTION_MANUAL_REFRESH
+                putExtra(EXTRA_WIDGET_ID, appWidgetId)
+                setPackage(context.packageName)
+            }
+            val pendingIntent = PendingIntent.getBroadcast(
+                context,
+                appWidgetId,
+                refreshIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            views.setOnClickPendingIntent(R.id.widget_countdown_container, pendingIntent)
+            views.setOnClickPendingIntent(R.id.chronometer_countdown, pendingIntent)
+            views.setOnClickPendingIntent(R.id.timer_boxes_layout, pendingIntent)
+
+            appWidgetManager.updateAppWidget(appWidgetId, views)
         }
     }
 

@@ -73,6 +73,13 @@ class MainActivity : AppCompatActivity() {
             openWebsiteWithConfirmation("https://seasonforge.online/")
         }
 
+        val tvVersion: TextView? = findViewById(R.id.tv_app_version)
+        val currentVerName = com.seasonforge.widget.utils.AppUpdateManager.getAppVersionName(this)
+        tvVersion?.text = "v$currentVerName"
+        tvVersion?.setOnClickListener {
+            performManualUpdateCheck()
+        }
+
         loadData()
         checkAppUpdate()
     }
@@ -81,6 +88,24 @@ class MainActivity : AppCompatActivity() {
         com.seasonforge.widget.utils.AppUpdateManager.checkForUpdate(this, forceCheck = false) { releaseInfo ->
             if (releaseInfo != null && releaseInfo.isNewer) {
                 showUpdateDialog(releaseInfo)
+            }
+        }
+    }
+
+    private fun performManualUpdateCheck() {
+        val isRu = SeasonUtils.isRu(this)
+        Toast.makeText(this, if (isRu) "🔍 Проверка обновлений..." else "🔍 Checking for updates...", Toast.LENGTH_SHORT).show()
+
+        com.seasonforge.widget.utils.AppUpdateManager.checkForUpdate(this, forceCheck = true) { releaseInfo ->
+            if (releaseInfo != null && releaseInfo.isNewer) {
+                showUpdateDialog(releaseInfo)
+            } else if (releaseInfo != null) {
+                val versionStr = com.seasonforge.widget.utils.AppUpdateManager.getAppVersionName(this)
+                val msg = if (isRu) "✅ У вас установлена актуальная версия v$versionStr" else "✅ You are on the latest version v$versionStr"
+                Toast.makeText(this, msg, Toast.LENGTH_LONG).show()
+            } else {
+                val msg = if (isRu) "⚠️ Не удалось проверить обновления" else "⚠️ Unable to check for updates"
+                Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
             }
         }
     }

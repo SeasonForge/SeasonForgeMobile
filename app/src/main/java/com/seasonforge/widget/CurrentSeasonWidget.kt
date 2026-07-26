@@ -8,12 +8,14 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
+import android.widget.Toast
 import com.seasonforge.widget.data.SeasonRepository
 import com.seasonforge.widget.utils.SeasonAlarmScheduler
 import com.seasonforge.widget.utils.SeasonUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class CurrentSeasonWidget : AppWidgetProvider() {
 
@@ -31,7 +33,10 @@ class CurrentSeasonWidget : AppWidgetProvider() {
 
             if (targetIds.isNotEmpty()) {
                 val appWidgetManager = AppWidgetManager.getInstance(context)
-                if (action == ACTION_MANUAL_REFRESH || action == AppWidgetManager.ACTION_APPWIDGET_UPDATE) {
+                val isManual = (action == ACTION_MANUAL_REFRESH)
+                if (isManual) {
+                    val msg = if (SeasonUtils.isRu(context)) "🔄 Обновление виджета..." else "🔄 Refreshing widget..."
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                     for (id in targetIds) {
                         if (id != AppWidgetManager.INVALID_APPWIDGET_ID) {
                             val quickViews = RemoteViews(context.packageName, R.layout.widget_current_season)
@@ -42,7 +47,7 @@ class CurrentSeasonWidget : AppWidgetProvider() {
                 }
                 for (id in targetIds) {
                     if (id != AppWidgetManager.INVALID_APPWIDGET_ID) {
-                        updateWidget(context, appWidgetManager, id)
+                        updateWidget(context, appWidgetManager, id, isManualRefresh = isManual)
                     }
                 }
             }
@@ -93,7 +98,8 @@ class CurrentSeasonWidget : AppWidgetProvider() {
         fun updateWidget(
             context: Context,
             appWidgetManager: AppWidgetManager,
-            appWidgetId: Int
+            appWidgetId: Int,
+            isManualRefresh: Boolean = false
         ) {
             val gameId = getGameId(context, appWidgetId)
             val theme = getWidgetTheme(context, appWidgetId)
@@ -101,81 +107,114 @@ class CurrentSeasonWidget : AppWidgetProvider() {
 
             CoroutineScope(Dispatchers.IO).launch {
                 val repository = SeasonRepository(context)
+
+                // 1. Fast local render from cache for 0ms UI response
+                val cachedGame = repository.getFromCache()?.games?.find { it.id == gameId }
+                if (cachedGame != null) {
+                    renderWidget(context, appWidgetManager, appWidgetId, cachedGame, theme, opacity)
+                }
+
+                // 2. Network fetch for updated data
                 val response = repository.fetchSeasons()
-                val game = response?.games?.find { it.id == gameId }
-
-                val mainViews = RemoteViews(context.packageName, R.layout.widget_current_season)
-                if (game != null) {
-                    val gameTitle = "${game.icon ?: ""} ${game.name?.get(context) ?: game.id}"
-                    val currentSeasonName = game.currentSeason?.name?.get(context) ?: "TBA"
-                    val statusText = game.status?.label?.get(context) ?: ""
-
-                    val progress = SeasonUtils.calculateSeasonProgress(game) ?: 0
-                    val bgColor = SeasonUtils.getBackgroundColor(theme, opacity, game.color)
-                    val artRes = SeasonUtils.getGameArtResource(game.id)
-                    val cardBgRes = SeasonUtils.getGameCardBackgroundResource(game.id)
-
-                    if (theme == "art" && artRes != null) {
-                        val artAlpha = ((100 - opacity.coerceIn(0, 100)) * 255 / 100)
-                        mainViews.setImageViewResource(R.id.img_widget_art_bg, artRes)
-                        mainViews.setInt(R.id.img_widget_art_bg, "setImageAlpha", artAlpha)
-                        mainViews.setViewVisibility(R.id.img_widget_art_bg, android.view.View.VISIBLE)
-                        if (opacity > 0) {
-                            mainViews.setInt(R.id.widget_container, "setBackgroundColor", bgColor)
-                        } else {
-                            mainViews.setInt(R.id.widget_container, "setBackgroundResource", cardBgRes)
-                        }
-                    } else {
-                        mainViews.setViewVisibility(R.id.img_widget_art_bg, android.view.View.GONE)
-                        if (opacity != 0) {
-                            mainViews.setInt(R.id.widget_container, "setBackgroundColor", bgColor)
-                        } else {
-                            mainViews.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.widget_bg)
-                        }
-                    }
-
-                    mainViews.setTextViewText(R.id.widget_game_name, gameTitle.trim())
-                    mainViews.setTextViewText(R.id.widget_status, statusText)
-                    mainViews.setTextViewText(R.id.widget_season_name, "${SeasonUtils.getCurrentSeasonLabel(context)}: $currentSeasonName")
-                    mainViews.setProgressBar(R.id.widget_progress_bar, 100, progress, false)
-
-                    val nextSeasonName = game.nextSeason?.name?.get(context)
-                    if (!nextSeasonName.isNullOrEmpty()) {
-                        val countdown = SeasonUtils.getCountdownText(game.nextSeason?.startDate, context)
-                        mainViews.setTextViewText(R.id.widget_next_season, "${SeasonUtils.getNextSeasonLabel(context)}: $nextSeasonName ($countdown)")
-                    } else {
-                        mainViews.setTextViewText(R.id.widget_next_season, "${SeasonUtils.getNextSeasonLabel(context)}: TBA")
-                    }
-
-                    // Schedule next energy-efficient update
-                    SeasonAlarmScheduler.scheduleNextUpdate(
-                        context,
-                        appWidgetId,
-                        game,
-                        CurrentSeasonWidget::class.java,
-                        "com.seasonforge.widget.ACTION_SMART_UPDATE_CARD",
-                        EXTRA_WIDGET_ID
-                    )
-                } else {
-                    mainViews.setTextViewText(R.id.widget_status, SeasonUtils.getDataUnavailableText(context))
+                val freshGame = response?.games?.find { it.id == gameId }
+                if (freshGame != null) {
+                    renderWidget(context, appWidgetManager, appWidgetId, freshGame, theme, opacity)
+                } else if (cachedGame == null) {
+                    val views = RemoteViews(context.packageName, R.layout.widget_current_season)
+                    views.setTextViewText(R.id.widget_status, SeasonUtils.getDataUnavailableText(context))
+                    appWidgetManager.updateAppWidget(appWidgetId, views)
                 }
 
-                // Click Intent for manual refresh
-                val refreshIntent = Intent(context, CurrentSeasonWidget::class.java).apply {
-                    action = ACTION_MANUAL_REFRESH
-                    putExtra(EXTRA_WIDGET_ID, appWidgetId)
-                    setPackage(context.packageName)
+                if (isManualRefresh) {
+                    withContext(Dispatchers.Main) {
+                        val msg = if (freshGame != null) {
+                            if (SeasonUtils.isRu(context)) "✅ Виджет обновлен" else "✅ Widget updated"
+                        } else if (cachedGame != null) {
+                            if (SeasonUtils.isRu(context)) "⚠️ Нет сети (использован кэш)" else "⚠️ Offline (used cache)"
+                        } else {
+                            if (SeasonUtils.isRu(context)) "⚠️ Не удалось обновить" else "⚠️ Refresh failed"
+                        }
+                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                    }
                 }
-                val pendingIntent = PendingIntent.getBroadcast(
-                    context,
-                    appWidgetId,
-                    refreshIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                mainViews.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
-
-                appWidgetManager.updateAppWidget(appWidgetId, mainViews)
             }
+        }
+
+        private fun renderWidget(
+            context: Context,
+            appWidgetManager: AppWidgetManager,
+            appWidgetId: Int,
+            game: com.seasonforge.widget.models.Game,
+            theme: String,
+            opacity: Int
+        ) {
+            val mainViews = RemoteViews(context.packageName, R.layout.widget_current_season)
+            val gameTitle = "${game.icon ?: ""} ${game.name?.get(context) ?: game.id}"
+            val currentSeasonName = game.currentSeason?.name?.get(context) ?: "TBA"
+            val statusText = game.status?.label?.get(context) ?: ""
+
+            val progress = SeasonUtils.calculateSeasonProgress(game) ?: 0
+            val bgColor = SeasonUtils.getBackgroundColor(theme, opacity, game.color)
+            val artRes = SeasonUtils.getGameArtResource(game.id)
+            val cardBgRes = SeasonUtils.getGameCardBackgroundResource(game.id)
+
+            if (theme == "art" && artRes != null) {
+                val artAlpha = ((100 - opacity.coerceIn(0, 100)) * 255 / 100)
+                mainViews.setImageViewResource(R.id.img_widget_art_bg, artRes)
+                mainViews.setInt(R.id.img_widget_art_bg, "setImageAlpha", artAlpha)
+                mainViews.setViewVisibility(R.id.img_widget_art_bg, android.view.View.VISIBLE)
+                if (opacity > 0) {
+                    mainViews.setInt(R.id.widget_container, "setBackgroundColor", bgColor)
+                } else {
+                    mainViews.setInt(R.id.widget_container, "setBackgroundResource", cardBgRes)
+                }
+            } else {
+                mainViews.setViewVisibility(R.id.img_widget_art_bg, android.view.View.GONE)
+                if (opacity != 0) {
+                    mainViews.setInt(R.id.widget_container, "setBackgroundColor", bgColor)
+                } else {
+                    mainViews.setInt(R.id.widget_container, "setBackgroundResource", R.drawable.widget_bg)
+                }
+            }
+
+            mainViews.setTextViewText(R.id.widget_game_name, gameTitle.trim())
+            mainViews.setTextViewText(R.id.widget_status, statusText)
+            mainViews.setTextViewText(R.id.widget_season_name, "${SeasonUtils.getCurrentSeasonLabel(context)}: $currentSeasonName")
+            mainViews.setProgressBar(R.id.widget_progress_bar, 100, progress, false)
+
+            val nextSeasonName = game.nextSeason?.name?.get(context)
+            if (!nextSeasonName.isNullOrEmpty()) {
+                val countdown = SeasonUtils.getCountdownText(game.nextSeason?.startDate, context)
+                mainViews.setTextViewText(R.id.widget_next_season, "${SeasonUtils.getNextSeasonLabel(context)}: $nextSeasonName ($countdown)")
+            } else {
+                mainViews.setTextViewText(R.id.widget_next_season, "${SeasonUtils.getNextSeasonLabel(context)}: TBA")
+            }
+
+            // Schedule next energy-efficient update
+            SeasonAlarmScheduler.scheduleNextUpdate(
+                context,
+                appWidgetId,
+                game,
+                CurrentSeasonWidget::class.java,
+                "com.seasonforge.widget.ACTION_SMART_UPDATE_CARD",
+                EXTRA_WIDGET_ID
+            )
+
+            // Click Intent for manual refresh
+            val refreshIntent = Intent(context, CurrentSeasonWidget::class.java).apply {
+                action = ACTION_MANUAL_REFRESH
+                putExtra(EXTRA_WIDGET_ID, appWidgetId)
+                setPackage(context.packageName)
+            }
+            val pendingIntent = PendingIntent.getBroadcast(
+                context,
+                appWidgetId,
+                refreshIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            mainViews.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
+
+            appWidgetManager.updateAppWidget(appWidgetId, mainViews)
         }
     }
 

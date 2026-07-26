@@ -42,10 +42,11 @@
    - Не ищите JDK на диске и не проверяйте версии Java — команды `.\gradlew.bat compileDebugKotlin` и `.\gradlew.bat assembleDebug` сразу работают из коробки.
 
 12. **Процедура публикации релиза («пушим в релиз»)**:
-   - При фразе «пушим в релиз»:
-     1. Собрать подписанный APK: `.\gradlew.bat assembleRelease`.
-     2. Скопировать/переименовать релизный APK в `SeasonForge-v<versionName>.apk` (например, `SeasonForge-v2.7.0.apk`).
-     3. Выполнить коммит и пуш изменений в Git репозиторий.
-     4. Опубликовать релиз на GitHub Releases для `SeasonForge/SeasonForgeMobile` с тегом `v<versionName>` и прикрепить `SeasonForge-v<versionName>.apk` в секцию Assets.
+   - При фразе «пушим в релиз» (или «собирай и пуш»):
+     1. Поднять `versionCode` на +1 и установить 3-значную версию `versionName` (например, `"2.8.1"` по схеме SemVer `MAJOR.MINOR.PATCH`).
+     2. Собрать подписанный APK: `.\gradlew.bat assembleRelease`.
+     3. Скопировать/переименовать релизный APK в `SeasonForge-v<versionName>.apk` (например, `SeasonForge-v2.8.1.apk`).
+     4. Выполнить коммит и пуш изменений в Git репозиторий.
+     5. Опубликовать релиз на GitHub Releases для `SeasonForge/SeasonForgeMobile` с тегом `v<versionName>` и прикрепить `SeasonForge-v<versionName>.apk` в секцию Assets.
 
 

@@ -9,12 +9,14 @@ import android.content.Intent
 import android.os.Build
 import android.os.SystemClock
 import android.widget.RemoteViews
+import android.widget.Toast
 import com.seasonforge.widget.data.SeasonRepository
 import com.seasonforge.widget.utils.SeasonAlarmScheduler
 import com.seasonforge.widget.utils.SeasonUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class CountdownWidget : AppWidgetProvider() {
 
@@ -32,7 +34,10 @@ class CountdownWidget : AppWidgetProvider() {
 
             if (targetIds.isNotEmpty()) {
                 val appWidgetManager = AppWidgetManager.getInstance(context)
-                if (action == ACTION_MANUAL_REFRESH) {
+                val isManual = (action == ACTION_MANUAL_REFRESH)
+                if (isManual) {
+                    val msg = if (SeasonUtils.isRu(context)) "🔄 Обновление виджета..." else "🔄 Refreshing widget..."
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                     for (id in targetIds) {
                         if (id != AppWidgetManager.INVALID_APPWIDGET_ID) {
                             val quickViews = RemoteViews(context.packageName, R.layout.widget_countdown)
@@ -43,7 +48,7 @@ class CountdownWidget : AppWidgetProvider() {
                 }
                 for (id in targetIds) {
                     if (id != AppWidgetManager.INVALID_APPWIDGET_ID) {
-                        updateWidget(context, appWidgetManager, id)
+                        updateWidget(context, appWidgetManager, id, isManualRefresh = isManual)
                     }
                 }
             }
@@ -88,7 +93,8 @@ class CountdownWidget : AppWidgetProvider() {
         fun updateWidget(
             context: Context,
             appWidgetManager: AppWidgetManager,
-            appWidgetId: Int
+            appWidgetId: Int,
+            isManualRefresh: Boolean = false
         ) {
             val gameId = getGameId(context, appWidgetId)
             val theme = getWidgetTheme(context, appWidgetId)
@@ -112,6 +118,19 @@ class CountdownWidget : AppWidgetProvider() {
                     val views = RemoteViews(context.packageName, R.layout.widget_countdown)
                     views.setTextViewText(R.id.tv_status_badge, SeasonUtils.getDataUnavailableText(context))
                     appWidgetManager.updateAppWidget(appWidgetId, views)
+                }
+
+                if (isManualRefresh) {
+                    withContext(Dispatchers.Main) {
+                        val msg = if (freshGame != null) {
+                            if (SeasonUtils.isRu(context)) "✅ Виджет обновлен" else "✅ Widget updated"
+                        } else if (cachedGame != null) {
+                            if (SeasonUtils.isRu(context)) "⚠️ Нет сети (использован кэш)" else "⚠️ Offline (used cache)"
+                        } else {
+                            if (SeasonUtils.isRu(context)) "⚠️ Не удалось обновить" else "⚠️ Refresh failed"
+                        }
+                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         }

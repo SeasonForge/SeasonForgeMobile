@@ -123,15 +123,29 @@
                         android:textStyle="bold" />
                 </LinearLayout>
 
-                <TextView
-                    android:id="@+id/colon_1"
+                <ViewFlipper
+                    android:id="@+id/flipper_colon_1"
                     android:layout_width="8dp"
                     android:layout_height="wrap_content"
-                    android:gravity="center"
-                    android:text=":"
-                    android:textColor="#F5C342"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
+                    android:autoStart="true"
+                    android:flipInterval="1000">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text=":"
+                        android:textColor="#F5C342"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text=":"
+                        android:textColor="#33F5C342"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </ViewFlipper>
 
                 <!-- Hours Box -->
                 <LinearLayout
@@ -163,41 +177,55 @@
                         android:textStyle="bold" />
                 </LinearLayout>
 
-                <TextView
-                    android:id="@+id/colon_2"
+                <ViewFlipper
+                    android:id="@+id/flipper_colon_2"
                     android:layout_width="8dp"
                     android:layout_height="wrap_content"
-                    android:gravity="center"
-                    android:text=":"
-                    android:textColor="#F5C342"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
+                    android:autoStart="true"
+                    android:flipInterval="1000">
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text=":"
+                        android:textColor="#F5C342"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:text=":"
+                        android:textColor="#33F5C342"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </ViewFlipper>
 
-                <!-- Live Mins & Secs Chronometer Box -->
+                <!-- Minutes Box -->
                 <LinearLayout
                     android:id="@+id/box_mins_container"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
-                    android:layout_weight="1.2"
+                    android:layout_weight="1"
                     android:background="@drawable/widget_box_bg"
                     android:gravity="center"
                     android:orientation="vertical"
                     android:padding="1dp">
 
-                    <Chronometer
-                        android:id="@+id/chronometer_countdown"
+                    <TextView
+                        android:id="@+id/tv_box_mins_val"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:gravity="center"
+                        android:text="45"
                         android:textColor="#F5C342"
-                        android:textSize="13sp"
+                        android:textSize="14sp"
                         android:textStyle="bold" />
 
                     <TextView
                         android:id="@+id/tv_box_mins_label"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="МИН : СЕК"
+                        android:text="МИНУТ"
                         android:textColor="#8A8A9E"
                         android:textSize="7sp"
                         android:textStyle="bold" />
@@ -205,15 +233,38 @@
 
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/tv_start_date_footer"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:gravity="center"
-                android:text="📅 Старт: 15 декабря 2026"
-                android:textColor="#8A8A9E"
-                android:textSize="9sp" />
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tv_start_date_footer"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:text="📅 Старт: 15 декабря 2026"
+                    android:textColor="#8A8A9E"
+                    android:textSize="9sp" />
+
+                <TextView
+                    android:id="@+id/tv_last_updated"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/widget_status_pill_bg"
+                    android:paddingStart="6dp"
+                    android:paddingTop="2dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="2dp"
+                    android:text="Обновлено только что"
+                    android:textColor="#A0A0B0"
+                    android:textSize="8sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
 
         </LinearLayout>
 

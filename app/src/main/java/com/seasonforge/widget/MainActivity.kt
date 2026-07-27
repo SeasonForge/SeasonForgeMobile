@@ -385,24 +385,14 @@ class MainActivity : AppCompatActivity() {
                 val triple = SeasonUtils.getCountdownTriple(startDateStr)
                 val days = triple?.first ?: 0
                 val hours = triple?.second ?: 0
+                val mins = triple?.third ?: 0
                 previewView.findViewById<TextView?>(R.id.tv_box_days_val)?.text = "$days"
-                previewView.findViewById<TextView?>(R.id.tv_box_hours_val)?.text = "${hours % 24}"
+                previewView.findViewById<TextView?>(R.id.tv_box_hours_val)?.text = "$hours"
+                previewView.findViewById<TextView?>(R.id.tv_box_mins_val)?.text = "$mins"
 
-                val chronometer = previewView.findViewById<Chronometer?>(R.id.chronometer_countdown)
-                if (chronometer != null && !startDateStr.isNullOrEmpty()) {
-                    val targetInstant = SeasonUtils.parseIsoDate(startDateStr)
-                    val targetMillis = targetInstant?.toEpochMilli() ?: 0L
-                    val nowMillis = System.currentTimeMillis()
-                    if (targetMillis > nowMillis) {
-                        val millisLeftInHour = (targetMillis - nowMillis) % (3600 * 1000L)
-                        val elapsedRealtimeTargetHour = SystemClock.elapsedRealtime() + millisLeftInHour
-                        chronometer.base = elapsedRealtimeTargetHour
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                            chronometer.isCountDown = true
-                        }
-                        chronometer.start()
-                    }
-                }
+                val repository = SeasonRepository(this)
+                val lastUpdatedStr = SeasonUtils.getFormattedLastUpdatedTime(repository.getLastUpdatedTimestamp(), this)
+                previewView.findViewById<TextView?>(R.id.tv_last_updated)?.text = lastUpdatedStr
 
                 val startDateText = if (!startDateStr.isNullOrEmpty() && startDateStr != "TBA") "📅 ${SeasonUtils.getStartLabel(this)}: ${startDateStr.take(10)}" else "📅 ${SeasonUtils.getStartLabel(this)}: TBA"
                 previewView.findViewById<TextView?>(R.id.tv_start_date_footer)?.text = startDateText

@@ -78,6 +78,47 @@ object SeasonUtils {
     fun getHoursLabel(context: android.content.Context? = null): String = if (isRu(context)) "ЧАСОВ" else "HOURS"
     fun getMinsLabel(context: android.content.Context? = null): String = if (isRu(context)) "МИНУТ" else "MINS"
 
+    fun getFormattedLastUpdatedTime(timestamp: Long, context: android.content.Context? = null): String {
+        val isRuLang = isRu(context)
+        if (timestamp <= 0L) return if (isRuLang) "Обновлено --:--" else "Updated --:--"
+        val now = System.currentTimeMillis()
+        val diffMs = now - timestamp
+        if (diffMs < 0L) return if (isRuLang) "Обновлено --:--" else "Updated --:--"
+
+        val diffMins = java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(diffMs)
+
+        if (diffMins < 5) {
+            return if (isRuLang) "Обновлено только что" else "Updated just now"
+        }
+        if (diffMins < 60) {
+            return if (isRuLang) "Обновлено $diffMins мин. назад" else "Updated ${diffMins}m ago"
+        }
+
+        val timeZone = java.util.TimeZone.getDefault()
+        val calendarNow = java.util.Calendar.getInstance(timeZone).apply { timeInMillis = now }
+        val calendarTarget = java.util.Calendar.getInstance(timeZone).apply { timeInMillis = timestamp }
+
+        val timeFormat = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+        val formattedTime = timeFormat.format(java.util.Date(timestamp))
+
+        val isToday = calendarNow.get(java.util.Calendar.YEAR) == calendarTarget.get(java.util.Calendar.YEAR) &&
+                calendarNow.get(java.util.Calendar.DAY_OF_YEAR) == calendarTarget.get(java.util.Calendar.DAY_OF_YEAR)
+
+        if (isToday) {
+            return if (isRuLang) "Обновлено в $formattedTime" else "Updated at $formattedTime"
+        }
+
+        val isYesterday = calendarNow.get(java.util.Calendar.YEAR) == calendarTarget.get(java.util.Calendar.YEAR) &&
+                calendarNow.get(java.util.Calendar.DAY_OF_YEAR) - calendarTarget.get(java.util.Calendar.DAY_OF_YEAR) == 1
+
+        if (isYesterday) {
+            return if (isRuLang) "Обновлено вчера в $formattedTime" else "Updated yesterday at $formattedTime"
+        }
+
+        val dateFormat = java.text.SimpleDateFormat("dd.MM HH:mm", java.util.Locale.getDefault())
+        return if (isRuLang) "Обновлено ${dateFormat.format(java.util.Date(timestamp))}" else "Updated ${dateFormat.format(java.util.Date(timestamp))}"
+    }
+
     fun getCountdownText(targetDateStr: String?, context: android.content.Context? = null): String {
         val triple = getCountdownTriple(targetDateStr) ?: return "TBA"
         val (days, hours, mins) = triple

@@ -22,7 +22,7 @@ class CurrentSeasonWidget : AppWidgetProvider() {
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         val action = intent.action
-        if (action == ACTION_MANUAL_REFRESH || action == AppWidgetManager.ACTION_APPWIDGET_UPDATE) {
+        if (action == ACTION_MANUAL_REFRESH || action == ACTION_SMART_UPDATE_CARD || action == AppWidgetManager.ACTION_APPWIDGET_UPDATE || action == Intent.ACTION_USER_PRESENT) {
             val appWidgetId = intent.getIntExtra(EXTRA_WIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
             val appWidgetIds = intent.getIntArrayExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS)
             val targetIds = when {
@@ -66,6 +66,7 @@ class CurrentSeasonWidget : AppWidgetProvider() {
 
     companion object {
         const val ACTION_MANUAL_REFRESH = "com.seasonforge.widget.ACTION_MANUAL_REFRESH_CARD"
+        const val ACTION_SMART_UPDATE_CARD = "com.seasonforge.widget.ACTION_SMART_UPDATE_CARD"
         const val EXTRA_WIDGET_ID = "com.seasonforge.widget.EXTRA_WIDGET_ID_CARD"
 
         const val PREF_LAST_SELECTED_GAME = com.seasonforge.widget.utils.WidgetPrefsManager.PREF_LAST_SELECTED_GAME

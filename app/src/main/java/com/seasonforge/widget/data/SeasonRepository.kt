@@ -44,7 +44,13 @@ class SeasonRepository(private val context: Context? = null) {
         context?.getSharedPreferences("com.seasonforge.widget.CACHE", Context.MODE_PRIVATE)
             ?.edit()
             ?.putString("cached_seasons_json", json)
+            ?.putLong("cached_seasons_timestamp", System.currentTimeMillis())
             ?.apply()
+    }
+
+    fun getLastUpdatedTimestamp(): Long {
+        return context?.getSharedPreferences("com.seasonforge.widget.CACHE", Context.MODE_PRIVATE)
+            ?.getLong("cached_seasons_timestamp", 0L) ?: 0L
     }
 
     fun getFromCache(): SeasonResponse? {

@@ -37,6 +37,8 @@
             android:label="SeasonForge — Карточка сезона">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.USER_PRESENT" />
+                <action android:name="com.seasonforge.widget.ACTION_SMART_UPDATE_CARD" />
                 <action android:name="com.seasonforge.widget.ACTION_MANUAL_REFRESH_CARD" />
             </intent-filter>
             <meta-data

@@ -19,6 +19,8 @@ class WidgetConfigActivity : AppCompatActivity() {
 
     private var appWidgetId = AppWidgetManager.INVALID_APPWIDGET_ID
     private lateinit var gameSpinner: Spinner
+    private lateinit var themeSpinner: Spinner
+    private lateinit var opacitySeekBar: android.widget.SeekBar
     private lateinit var btnSave: Button
     private var gamesList: List<Pair<String, String>> = emptyList()
 
@@ -54,28 +56,37 @@ class WidgetConfigActivity : AppCompatActivity() {
         }
 
         gameSpinner = findViewById(R.id.spinner_games)
+        themeSpinner = findViewById(R.id.spinner_theme)
+        opacitySeekBar = findViewById(R.id.seekbar_opacity)
         btnSave = findViewById(R.id.btn_save)
+
+        val themes = listOf("Dark", "Art")
+        val themeAdapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, themes)
+        themeAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        themeSpinner.adapter = themeAdapter
 
         loadGames()
 
         btnSave.setOnClickListener {
             if (gamesList.isNotEmpty()) {
                 val selectedGameId = gamesList[gameSpinner.selectedItemPosition].first
+                val selectedTheme = themeSpinner.selectedItem.toString().lowercase()
+                val selectedOpacity = opacitySeekBar.progress
                 val appWidgetManager = AppWidgetManager.getInstance(this)
                 val providerInfo = appWidgetManager.getAppWidgetInfo(appWidgetId)
 
                 val className = providerInfo?.provider?.className
                 when (className) {
                     CountdownWidget::class.java.name -> {
-                        CountdownWidget.saveWidgetTheme(this, appWidgetId, selectedGameId, "art", 15)
+                        CountdownWidget.saveWidgetTheme(this, appWidgetId, selectedGameId, selectedTheme, selectedOpacity)
                         CountdownWidget.updateWidget(this, appWidgetManager, appWidgetId)
                     }
                     CombinedWidget::class.java.name -> {
-                        CombinedWidget.saveWidgetTheme(this, appWidgetId, selectedGameId, "art", 15)
+                        CombinedWidget.saveWidgetTheme(this, appWidgetId, selectedGameId, selectedTheme, selectedOpacity)
                         CombinedWidget.updateWidget(this, appWidgetManager, appWidgetId)
                     }
                     else -> {
-                        CurrentSeasonWidget.saveWidgetTheme(this, appWidgetId, selectedGameId, "art", 15)
+                        CurrentSeasonWidget.saveWidgetTheme(this, appWidgetId, selectedGameId, selectedTheme, selectedOpacity)
                         CurrentSeasonWidget.updateWidget(this, appWidgetManager, appWidgetId)
                     }
                 }

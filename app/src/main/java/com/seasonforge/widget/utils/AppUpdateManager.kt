@@ -82,16 +82,17 @@ object AppUpdateManager {
                 }
 
                 val jsonObject = JsonParser.parseString(bodyString).asJsonObject
-                val tagName = jsonObject.get("tag_name")?.asString ?: ""
-                val releaseNotes = jsonObject.get("body")?.asString ?: ""
+                val tagName = jsonObject.get("tag_name")?.let { if (it.isJsonPrimitive && it.asJsonPrimitive.isString) it.asString else "" } ?: ""
+                val releaseNotes = jsonObject.get("body")?.let { if (it.isJsonPrimitive && it.asJsonPrimitive.isString) it.asString else "" } ?: ""
 
                 var apkUrl = ""
-                val assets = jsonObject.getAsJsonArray("assets")
+                val assets = if (jsonObject.has("assets") && jsonObject.get("assets").isJsonArray) jsonObject.getAsJsonArray("assets") else null
                 if (assets != null) {
                     for (element in assets) {
+                        if (!element.isJsonObject) continue
                         val assetObj = element.asJsonObject
-                        val name = assetObj.get("name")?.asString ?: ""
-                        val downloadUrl = assetObj.get("browser_download_url")?.asString ?: ""
+                        val name = assetObj.get("name")?.let { if (it.isJsonPrimitive && it.asJsonPrimitive.isString) it.asString else "" } ?: ""
+                        val downloadUrl = assetObj.get("browser_download_url")?.let { if (it.isJsonPrimitive && it.asJsonPrimitive.isString) it.asString else "" } ?: ""
                         if (name.endsWith(".apk", ignoreCase = true) || downloadUrl.endsWith(".apk", ignoreCase = true)) {
                             if (isValidDomain(downloadUrl)) {
                                 apkUrl = downloadUrl

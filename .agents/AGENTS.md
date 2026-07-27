@@ -49,4 +49,5 @@
      4. Выполнить коммит и пуш изменений в Git репозиторий.
      5. Опубликовать релиз на GitHub Releases для `SeasonForge/SeasonForgeMobile` с тегом `v<versionName>` и прикрепить `SeasonForge-v<versionName>.apk` в секцию Assets.
 
-
+13. **Особенности Debug-сборки**:
+    - Debug-сборка использует `applicationIdSuffix = ".debug"` (пакет `com.seasonforge.widget.debug`) и подписывается дебажным ключом, чтобы устанавливаться отдельно от релизной версии без конфликтов.

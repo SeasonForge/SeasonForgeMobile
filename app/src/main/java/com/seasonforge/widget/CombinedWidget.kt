@@ -154,6 +154,7 @@ class CombinedWidget : AppWidgetProvider() {
             val triple = SeasonUtils.getCountdownTriple(startDateStr)
             val days = triple?.first ?: 0
             val hours = triple?.second ?: 0
+            val mins = triple?.third ?: 0
 
             val bgColor = SeasonUtils.getBackgroundColor(theme, opacity, game.color)
             val artRes = SeasonUtils.getGameArtResource(game.id)
@@ -187,31 +188,15 @@ class CombinedWidget : AppWidgetProvider() {
             views.setTextViewText(R.id.tv_next_season_title, "${SeasonUtils.getUntilStartLabel(context)}: $nextSeasonName")
             views.setTextViewText(R.id.tv_box_days_label, SeasonUtils.getDaysLabel(context))
             views.setTextViewText(R.id.tv_box_hours_label, SeasonUtils.getHoursLabel(context))
+            views.setTextViewText(R.id.tv_box_mins_label, SeasonUtils.getMinsLabel(context))
+
             views.setTextViewText(R.id.tv_box_days_val, "$days")
-            views.setTextViewText(R.id.tv_box_hours_val, "${hours % 24}")
+            views.setTextViewText(R.id.tv_box_hours_val, "$hours")
+            views.setTextViewText(R.id.tv_box_mins_val, "$mins")
 
-            val targetInstant = SeasonUtils.parseIsoDate(startDateStr)
-            val targetMillis = targetInstant?.toEpochMilli() ?: 0L
-            val nowMillis = System.currentTimeMillis()
-
-            if (targetMillis > nowMillis) {
-                var millisLeftInHour = (targetMillis - nowMillis) % (3600 * 1000L)
-                if (millisLeftInHour <= 0L) {
-                    millisLeftInHour = 3600 * 1000L
-                }
-                val elapsedRealtimeTargetHour = SystemClock.elapsedRealtime() + millisLeftInHour
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    views.setChronometerCountDown(R.id.chronometer_countdown, true)
-                }
-                views.setChronometer(R.id.chronometer_countdown, elapsedRealtimeTargetHour, null, true)
-            } else {
-                views.setTextViewText(R.id.tv_box_days_val, "0")
-                views.setTextViewText(R.id.tv_box_hours_val, "0")
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    views.setChronometerCountDown(R.id.chronometer_countdown, false)
-                }
-                views.setChronometer(R.id.chronometer_countdown, SystemClock.elapsedRealtime(), null, false)
-            }
+            val repository = SeasonRepository(context)
+            val lastUpdatedStr = SeasonUtils.getFormattedLastUpdatedTime(repository.getLastUpdatedTimestamp(), context)
+            views.setTextViewText(R.id.tv_last_updated, lastUpdatedStr)
 
             val footerText = if (startDateStr.isNotEmpty() && startDateStr != "TBA") {
                 "📅 ${SeasonUtils.getStartLabel(context)}: ${startDateStr.take(10)}"
@@ -243,7 +228,6 @@ class CombinedWidget : AppWidgetProvider() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
             views.setOnClickPendingIntent(R.id.widget_combined_container, pendingIntent)
-            views.setOnClickPendingIntent(R.id.chronometer_countdown, pendingIntent)
             views.setOnClickPendingIntent(R.id.timer_boxes_layout, pendingIntent)
 
             appWidgetManager.updateAppWidget(appWidgetId, views)

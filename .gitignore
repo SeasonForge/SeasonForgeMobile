@@ -22,6 +22,7 @@ captures/
 *.jks
 
 # Antigravity & System generated
+.agents/
 .gemini/
 brain/
 scratch/

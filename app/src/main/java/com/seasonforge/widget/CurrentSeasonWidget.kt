@@ -32,6 +32,7 @@ class CurrentSeasonWidget : AppWidgetProvider() {
             }
 
             if (targetIds.isNotEmpty()) {
+                val pendingResult = goAsync()
                 val appWidgetManager = AppWidgetManager.getInstance(context)
                 val isManual = (action == ACTION_MANUAL_REFRESH)
                 if (isManual) {
@@ -45,9 +46,20 @@ class CurrentSeasonWidget : AppWidgetProvider() {
                         }
                     }
                 }
-                for (id in targetIds) {
-                    if (id != AppWidgetManager.INVALID_APPWIDGET_ID) {
-                        updateWidget(context, appWidgetManager, id, isManualRefresh = isManual)
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        for (id in targetIds) {
+                            if (id != AppWidgetManager.INVALID_APPWIDGET_ID) {
+                                performUpdateWidget(context, appWidgetManager, id, isManualRefresh = isManual)
+                            }
+                        }
+                        if (isManual) {
+                            withContext(Dispatchers.Main) {
+                                Toast.makeText(context, SeasonUtils.getWidgetUpdatedToastText(context), Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    } finally {
+                        pendingResult?.finish()
                     }
                 }
             }
@@ -59,8 +71,15 @@ class CurrentSeasonWidget : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray
     ) {
-        for (appWidgetId in appWidgetIds) {
-            updateWidget(context, appWidgetManager, appWidgetId)
+        val pendingResult = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                for (appWidgetId in appWidgetIds) {
+                    performUpdateWidget(context, appWidgetManager, appWidgetId)
+                }
+            } finally {
+                pendingResult?.finish()
+            }
         }
     }
 
@@ -102,41 +121,69 @@ class CurrentSeasonWidget : AppWidgetProvider() {
             appWidgetId: Int,
             isManualRefresh: Boolean = false
         ) {
+            CoroutineScope(Dispatchers.IO).launch {
+                performUpdateWidget(context, appWidgetManager, appWidgetId, isManualRefresh)
+            }
+        }
+
+        suspend fun performUpdateWidget(
+            context: Context,
+            appWidgetManager: AppWidgetManager,
+            appWidgetId: Int,
+            isManualRefresh: Boolean = false
+        ) {
+            // Compute alarm time immediately — before any async work to avoid drift
+            val scheduledUpdateMillis = System.currentTimeMillis().let { now -> now + (60_000L - (now % 60_000L)) }
             val gameId = getGameId(context, appWidgetId)
             val theme = getWidgetTheme(context, appWidgetId)
             val opacity = getWidgetOpacity(context, appWidgetId)
+            val repository = SeasonRepository(context)
 
-            CoroutineScope(Dispatchers.IO).launch {
-                val repository = SeasonRepository(context)
+            // 1. Fast local render from cache for 0ms UI response
+            val cachedGame = repository.getFromCache()?.games?.find { it.id == gameId }
+            if (cachedGame != null) {
+                renderWidget(context, appWidgetManager, appWidgetId, cachedGame, theme, opacity, isUpdating = isManualRefresh)
+            }
 
-                // 1. Fast local render from cache for 0ms UI response
-                val cachedGame = repository.getFromCache()?.games?.find { it.id == gameId }
-                if (cachedGame != null) {
-                    renderWidget(context, appWidgetManager, appWidgetId, cachedGame, theme, opacity)
-                }
+            // 2. Network fetch for updated data (only on manual refresh, missing cache, or cache older than 12 hours)
+            val lastUpdated = repository.getLastUpdatedTimestamp()
+            val cacheAge = System.currentTimeMillis() - lastUpdated
+            val twelveHoursMs = 12 * 3600 * 1000L
+            val shouldFetchNetwork = isManualRefresh || cachedGame == null || cacheAge >= twelveHoursMs
 
-                // 2. Network fetch for updated data
+            var freshGame: com.seasonforge.widget.models.Game? = null
+            if (shouldFetchNetwork) {
                 val response = repository.fetchSeasons()
-                val freshGame = response?.games?.find { it.id == gameId }
-                if (freshGame != null) {
-                    renderWidget(context, appWidgetManager, appWidgetId, freshGame, theme, opacity)
-                } else if (cachedGame == null) {
-                    val views = RemoteViews(context.packageName, R.layout.widget_current_season)
-                    views.setTextViewText(R.id.widget_status, SeasonUtils.getDataUnavailableText(context))
-                    appWidgetManager.updateAppWidget(appWidgetId, views)
-                }
+                freshGame = response?.games?.find { it.id == gameId }
+            }
 
-                if (isManualRefresh) {
-                    withContext(Dispatchers.Main) {
-                        val msg = if (freshGame != null) {
-                            if (SeasonUtils.isRu(context)) "✅ Виджет обновлен" else "✅ Widget updated"
-                        } else if (cachedGame != null) {
-                            if (SeasonUtils.isRu(context)) "⚠️ Нет сети (использован кэш)" else "⚠️ Offline (used cache)"
-                        } else {
-                            if (SeasonUtils.isRu(context)) "⚠️ Не удалось обновить" else "⚠️ Refresh failed"
-                        }
-                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+            val finalGame = freshGame ?: cachedGame
+            if (finalGame != null) {
+                renderWidget(context, appWidgetManager, appWidgetId, finalGame, theme, opacity, isUpdating = false)
+            } else {
+                val views = RemoteViews(context.packageName, R.layout.widget_current_season)
+                views.setTextViewText(R.id.widget_status, SeasonUtils.getDataUnavailableText(context))
+                appWidgetManager.updateAppWidget(appWidgetId, views)
+            }
+
+            // Always schedule next update — even on error path
+            SeasonAlarmScheduler.scheduleNextUpdate(
+                context, appWidgetId, finalGame,
+                CurrentSeasonWidget::class.java, ACTION_SMART_UPDATE_CARD, EXTRA_WIDGET_ID,
+                triggerAtMillis = scheduledUpdateMillis,
+                alarmRequestCodeOffset = 12000
+            )
+
+            if (isManualRefresh) {
+                withContext(Dispatchers.Main) {
+                    val msg = if (freshGame != null) {
+                        if (SeasonUtils.isRu(context)) "✅ Виджет обновлен" else "✅ Widget updated"
+                    } else if (cachedGame != null) {
+                        if (SeasonUtils.isRu(context)) "⚠️ Нет сети (использован кэш)" else "⚠️ Offline (used cache)"
+                    } else {
+                        if (SeasonUtils.isRu(context)) "⚠️ Не удалось обновить" else "⚠️ Refresh failed"
                     }
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -147,12 +194,13 @@ class CurrentSeasonWidget : AppWidgetProvider() {
             appWidgetId: Int,
             game: com.seasonforge.widget.models.Game,
             theme: String,
-            opacity: Int
+            opacity: Int,
+            isUpdating: Boolean = false
         ) {
             val mainViews = RemoteViews(context.packageName, R.layout.widget_current_season)
             val gameTitle = "${game.icon ?: ""} ${game.name?.get(context) ?: game.id}"
             val currentSeasonName = game.currentSeason?.name?.get(context) ?: "TBA"
-            val statusText = game.status?.label?.get(context) ?: ""
+            val statusText = if (isUpdating) SeasonUtils.getUpdatingText(context) else (game.status?.label?.get(context) ?: "")
 
             val progress = SeasonUtils.calculateSeasonProgress(game) ?: 0
             val bgColor = SeasonUtils.getBackgroundColor(theme, opacity, game.color)
@@ -191,29 +239,25 @@ class CurrentSeasonWidget : AppWidgetProvider() {
                 mainViews.setTextViewText(R.id.widget_next_season, "${SeasonUtils.getNextSeasonLabel(context)}: TBA")
             }
 
-            // Schedule next energy-efficient update
-            SeasonAlarmScheduler.scheduleNextUpdate(
-                context,
-                appWidgetId,
-                game,
-                CurrentSeasonWidget::class.java,
-                "com.seasonforge.widget.ACTION_SMART_UPDATE_CARD",
-                EXTRA_WIDGET_ID
-            )
 
-            // Click Intent for manual refresh
+            // Click Intent for manual refresh (using unique requestCode offset 20000 to prevent collision with alarm)
             val refreshIntent = Intent(context, CurrentSeasonWidget::class.java).apply {
                 action = ACTION_MANUAL_REFRESH
                 putExtra(EXTRA_WIDGET_ID, appWidgetId)
+                data = android.net.Uri.parse("seasonforge://current_season_widget/refresh/$appWidgetId")
                 setPackage(context.packageName)
             }
             val pendingIntent = PendingIntent.getBroadcast(
                 context,
-                appWidgetId,
+                appWidgetId + 22000,
                 refreshIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
             mainViews.setOnClickPendingIntent(R.id.widget_container, pendingIntent)
+            mainViews.setOnClickPendingIntent(R.id.widget_game_name, pendingIntent)
+            mainViews.setOnClickPendingIntent(R.id.widget_season_name, pendingIntent)
+            mainViews.setOnClickPendingIntent(R.id.widget_status, pendingIntent)
+            mainViews.setOnClickPendingIntent(R.id.widget_next_season, pendingIntent)
 
             appWidgetManager.updateAppWidget(appWidgetId, mainViews)
         }

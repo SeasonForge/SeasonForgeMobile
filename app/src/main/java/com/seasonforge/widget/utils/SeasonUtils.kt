@@ -138,13 +138,26 @@ object SeasonUtils {
         val now = Instant.now()
         if (now.isAfter(target)) return Triple(0, 0, 0)
 
-        val totalMinutes = now.until(target, ChronoUnit.MINUTES)
-        val days = totalMinutes / (24 * 60)
-        val hours = (totalMinutes % (24 * 60)) / 60
-        val mins = totalMinutes % 60
+        val totalSeconds = now.until(target, ChronoUnit.SECONDS)
+        val days = totalSeconds / (24 * 3600)
+        val hours = (totalSeconds % (24 * 3600)) / 3600
+        val mins = (totalSeconds % 3600) / 60
 
         return Triple(days, hours, mins)
     }
+
+    /**
+     * Returns the remaining seconds within the current hour (for Chronometer base).
+     * Chronometer will count down MM:SS automatically — no per-minute alarm needed.
+     */
+    fun getSecsInCurrentHour(targetDateStr: String?): Long {
+        val target = parseIsoDate(targetDateStr) ?: return 0L
+        val now = Instant.now()
+        if (now.isAfter(target)) return 0L
+        val totalSeconds = now.until(target, ChronoUnit.SECONDS)
+        return totalSeconds % 3600  // seconds remaining in the current hour
+    }
+
 
     fun getGameArtResource(gameId: String?): Int? {
         return when (gameId) {

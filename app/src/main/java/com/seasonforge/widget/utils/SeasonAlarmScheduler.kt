@@ -9,6 +9,7 @@ import com.seasonforge.widget.CountdownWidget
 import com.seasonforge.widget.models.Game
 import java.time.Instant
 import java.time.temporal.ChronoUnit
+import android.util.Log
 
 object SeasonAlarmScheduler {
 
@@ -18,61 +19,62 @@ object SeasonAlarmScheduler {
         game: Game?,
         targetClass: Class<*> = CountdownWidget::class.java,
         actionName: String = CountdownWidget.ACTION_SMART_UPDATE,
-        extraWidgetIdKey: String = CountdownWidget.EXTRA_WIDGET_ID
+        extraWidgetIdKey: String = CountdownWidget.EXTRA_WIDGET_ID,
+        triggerAtMillis: Long = System.currentTimeMillis().let { now -> now + (60_000L - (now % 60_000L)) },
+        alarmRequestCodeOffset: Int = 10000
     ) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
-        val targetInstant = SeasonUtils.parseIsoDate(game?.nextSeason?.startDate) ?: return
-
-        val now = Instant.now()
-        val targetMillis = targetInstant.toEpochMilli()
-        val nowMillis = System.currentTimeMillis()
-
-        val twelveHoursMillis = 12 * 3600 * 1000L
-        val nextUpdateMillis = if (now.isBefore(targetInstant)) {
-            val totalMillisLeft = targetMillis - nowMillis
-            var millisLeftInHour = totalMillisLeft % (3600 * 1000L)
-            if (millisLeftInHour <= 0L) {
-                millisLeftInHour = 3600 * 1000L
-            }
-            val nextHourlyUpdate = nowMillis + millisLeftInHour + 1000L
-            if (nextHourlyUpdate < targetMillis) nextHourlyUpdate else targetMillis
-        } else {
-            nowMillis + twelveHoursMillis
-        }
+        val nextUpdateMillis = triggerAtMillis
 
         val intent = Intent(context, targetClass).apply {
             action = actionName
             putExtra(extraWidgetIdKey, appWidgetId)
+            setPackage(context.packageName)
         }
 
         val pendingIntent = PendingIntent.getBroadcast(
             context,
-            appWidgetId,
+            appWidgetId + alarmRequestCodeOffset,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                try {
+            when {
+                // Android 12+ (S): проверяем разрешение явно перед вызовом exact alarm
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+                    if (alarmManager.canScheduleExactAlarms()) {
+                        alarmManager.setExactAndAllowWhileIdle(
+                            AlarmManager.RTC_WAKEUP,
+                            nextUpdateMillis,
+                            pendingIntent
+                        )
+                    } else {
+                        // Разрешение отозвано пользователем — inexact, Android сам выберет окно
+                        Log.w("SeasonAlarm", "SCHEDULE_EXACT_ALARM not granted, using inexact alarm")
+                        alarmManager.setAndAllowWhileIdle(
+                            AlarmManager.RTC_WAKEUP,
+                            nextUpdateMillis,
+                            pendingIntent
+                        )
+                    }
+                }
+                // Android 6–11 (M–R): exact alarm без проверки разрешения
+                Build.VERSION.SDK_INT >= Build.VERSION_CODES.M -> {
                     alarmManager.setExactAndAllowWhileIdle(
                         AlarmManager.RTC_WAKEUP,
                         nextUpdateMillis,
                         pendingIntent
                     )
-                } catch (e: SecurityException) {
-                    alarmManager.setAndAllowWhileIdle(
+                }
+                // Android < 6
+                else -> {
+                    alarmManager.setExact(
                         AlarmManager.RTC_WAKEUP,
                         nextUpdateMillis,
                         pendingIntent
                     )
                 }
-            } else {
-                alarmManager.setExact(
-                    AlarmManager.RTC_WAKEUP,
-                    nextUpdateMillis,
-                    pendingIntent
-                )
             }
         } catch (e: Exception) {
             e.printStackTrace()

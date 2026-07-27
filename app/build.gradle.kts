@@ -23,8 +23,8 @@ android {
         applicationId = "com.seasonforge.widget"
         minSdk = 26
         targetSdk = 34
-        versionCode = 21
-        versionName = "2.8.2"
+        versionCode = 22
+        versionName = "2.8.3"
     }
 
     signingConfigs {

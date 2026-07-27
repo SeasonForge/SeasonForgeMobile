@@ -11,8 +11,8 @@ import java.util.concurrent.TimeUnit
 
 class SeasonRepository(private val context: Context? = null) {
     private val client = OkHttpClient.Builder()
-        .connectTimeout(8, TimeUnit.SECONDS)
-        .readTimeout(8, TimeUnit.SECONDS)
+        .connectTimeout(5, TimeUnit.SECONDS)
+        .readTimeout(5, TimeUnit.SECONDS)
         .build()
 
     private val gson = Gson()

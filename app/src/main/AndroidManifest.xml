@@ -4,7 +4,10 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- API 33+: не требует разрешения пользователя, автоматически доступно для виджетов -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
@@ -83,6 +86,17 @@
         <receiver
             android:name=".utils.NotificationReceiver"
             android:exported="false" />
+
+        <receiver
+            android:name=".utils.WidgetAlarmRestoreReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <!-- Xiaomi fast boot -->
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
 
         <provider
             android:name="androidx.core.content.FileProvider"

@@ -17,70 +17,30 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class CurrentSeasonWidget : AppWidgetProvider() {
+class CurrentSeasonWidget : BaseWidgetProvider() {
 
-    override fun onReceive(context: Context, intent: Intent) {
-        super.onReceive(context, intent)
-        val action = intent.action
-        if (action == ACTION_MANUAL_REFRESH || action == ACTION_SMART_UPDATE_CARD || action == AppWidgetManager.ACTION_APPWIDGET_UPDATE || action == Intent.ACTION_USER_PRESENT) {
-            val appWidgetId = intent.getIntExtra(EXTRA_WIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
-            val appWidgetIds = intent.getIntArrayExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS)
-            val targetIds = when {
-                appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID -> intArrayOf(appWidgetId)
-                appWidgetIds != null && appWidgetIds.isNotEmpty() -> appWidgetIds
-                else -> AppWidgetManager.getInstance(context).getAppWidgetIds(ComponentName(context, CurrentSeasonWidget::class.java))
-            }
+    override val manualRefreshAction: String = ACTION_MANUAL_REFRESH
+    override val smartUpdateAction: String = ACTION_SMART_UPDATE_CARD
+    override val extraWidgetIdKey: String = EXTRA_WIDGET_ID
+    override val alarmRequestCodeOffset: Int = 30000
 
-            if (targetIds.isNotEmpty()) {
-                val pendingResult = goAsync()
-                val appWidgetManager = AppWidgetManager.getInstance(context)
-                val isManual = (action == ACTION_MANUAL_REFRESH)
-                if (isManual) {
-                    val msg = if (SeasonUtils.isRu(context)) "🔄 Обновление виджета..." else "🔄 Refreshing widget..."
-                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                    for (id in targetIds) {
-                        if (id != AppWidgetManager.INVALID_APPWIDGET_ID) {
-                            val quickViews = RemoteViews(context.packageName, R.layout.widget_current_season)
-                            quickViews.setTextViewText(R.id.widget_status, SeasonUtils.getUpdatingText(context))
-                            appWidgetManager.partiallyUpdateAppWidget(id, quickViews)
-                        }
-                    }
-                }
-                CoroutineScope(Dispatchers.IO).launch {
-                    try {
-                        for (id in targetIds) {
-                            if (id != AppWidgetManager.INVALID_APPWIDGET_ID) {
-                                performUpdateWidget(context, appWidgetManager, id, isManualRefresh = isManual)
-                            }
-                        }
-                        if (isManual) {
-                            withContext(Dispatchers.Main) {
-                                Toast.makeText(context, SeasonUtils.getWidgetUpdatedToastText(context), Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    } finally {
-                        pendingResult?.finish()
-                    }
-                }
-            }
-        }
-    }
-
-    override fun onUpdate(
+    override suspend fun performUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
-        appWidgetIds: IntArray
+        appWidgetId: Int,
+        isManualRefresh: Boolean
     ) {
-        val pendingResult = goAsync()
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                for (appWidgetId in appWidgetIds) {
-                    performUpdateWidget(context, appWidgetManager, appWidgetId)
-                }
-            } finally {
-                pendingResult?.finish()
-            }
-        }
+        performUpdateWidget(context, appWidgetManager, appWidgetId, isManualRefresh = isManualRefresh)
+    }
+
+    override fun updateUpdatingState(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int
+    ) {
+        val quickViews = RemoteViews(context.packageName, R.layout.widget_current_season)
+        quickViews.setTextViewText(R.id.widget_status, SeasonUtils.getUpdatingText(context))
+        appWidgetManager.partiallyUpdateAppWidget(appWidgetId, quickViews)
     }
 
     companion object {

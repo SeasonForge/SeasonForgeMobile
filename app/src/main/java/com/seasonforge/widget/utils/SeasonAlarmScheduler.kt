@@ -20,11 +20,16 @@ object SeasonAlarmScheduler {
         targetClass: Class<*> = CountdownWidget::class.java,
         actionName: String = CountdownWidget.ACTION_SMART_UPDATE,
         extraWidgetIdKey: String = CountdownWidget.EXTRA_WIDGET_ID,
-        triggerAtMillis: Long = System.currentTimeMillis().let { now -> now + (60_000L - (now % 60_000L)) },
+        triggerAtMillis: Long = System.currentTimeMillis().let { now -> now + (86_400_000L - (now % 86_400_000L)) },
         alarmRequestCodeOffset: Int = 10000
     ) {
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
-        val nextUpdateMillis = triggerAtMillis
+        val now = System.currentTimeMillis()
+        val nextUpdateMillis = if (triggerAtMillis <= now + 1000L) {
+            now + (86_400_000L - (now % 86_400_000L))
+        } else {
+            triggerAtMillis
+        }
 
         val intent = Intent(context, targetClass).apply {
             action = actionName
@@ -50,13 +55,26 @@ object SeasonAlarmScheduler {
                             pendingIntent
                         )
                     } else {
-                        // Разрешение отозвано пользователем — inexact, Android сам выберет окно
-                        Log.w("SeasonAlarm", "SCHEDULE_EXACT_ALARM not granted, using inexact alarm")
-                        alarmManager.setAndAllowWhileIdle(
-                            AlarmManager.RTC_WAKEUP,
-                            nextUpdateMillis,
-                            pendingIntent
-                        )
+                        // Если разрешение не дано, используем setAlarmClock (точный системный таймер без спец-разрешений)
+                        Log.w("SeasonAlarm", "SCHEDULE_EXACT_ALARM not granted, using setAlarmClock fallback")
+                        try {
+                            val showIntent = PendingIntent.getActivity(
+                                context,
+                                0,
+                                Intent(context, com.seasonforge.widget.MainActivity::class.java),
+                                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                            )
+                            alarmManager.setAlarmClock(
+                                AlarmManager.AlarmClockInfo(nextUpdateMillis, showIntent),
+                                pendingIntent
+                            )
+                        } catch (e: Exception) {
+                            alarmManager.setAndAllowWhileIdle(
+                                AlarmManager.RTC_WAKEUP,
+                                nextUpdateMillis,
+                                pendingIntent
+                            )
+                        }
                     }
                 }
                 // Android 6–11 (M–R): exact alarm без проверки разрешения
@@ -78,6 +96,33 @@ object SeasonAlarmScheduler {
             }
         } catch (e: Exception) {
             e.printStackTrace()
+        }
+
+    }
+
+    fun cancelScheduledUpdate(
+        context: Context,
+        appWidgetId: Int,
+        targetClass: Class<*>,
+        actionName: String,
+        extraWidgetIdKey: String,
+        alarmRequestCodeOffset: Int
+    ) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+        val intent = Intent(context, targetClass).apply {
+            action = actionName
+            putExtra(extraWidgetIdKey, appWidgetId)
+            setPackage(context.packageName)
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            appWidgetId + alarmRequestCodeOffset,
+            intent,
+            PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+        )
+        if (pendingIntent != null) {
+            alarmManager.cancel(pendingIntent)
+            pendingIntent.cancel()
         }
     }
 }

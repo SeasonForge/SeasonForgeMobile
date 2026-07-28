@@ -174,6 +174,7 @@ object AppUpdateManager {
             Toast.makeText(context, "Downloading update v${releaseInfo.tagName}...", Toast.LENGTH_SHORT).show()
 
             // 4. Register receiver for download completion
+            val activityRef = java.lang.ref.WeakReference(activity)
             val onCompleteReceiver = object : BroadcastReceiver() {
                 override fun onReceive(recvContext: Context?, intent: Intent?) {
                     val id = intent?.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L)
@@ -182,10 +183,15 @@ object AppUpdateManager {
                             context.unregisterReceiver(this)
                         } catch (_: Exception) {}
 
+                        val currentActivity = activityRef.get()
                         if (targetFile.exists() && targetFile.length() > 0) {
-                            promptInstallApk(activity, targetFile)
+                            if (currentActivity != null && !currentActivity.isFinishing && !currentActivity.isDestroyed) {
+                                promptInstallApk(currentActivity, targetFile)
+                            }
                         } else {
-                            Toast.makeText(activity, "Download failed or file corrupted", Toast.LENGTH_LONG).show()
+                            if (currentActivity != null && !currentActivity.isFinishing && !currentActivity.isDestroyed) {
+                                Toast.makeText(currentActivity, "Download failed or file corrupted", Toast.LENGTH_LONG).show()
+                            }
                         }
                     }
                 }

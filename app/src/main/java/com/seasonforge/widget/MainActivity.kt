@@ -19,7 +19,9 @@ import android.widget.ProgressBar
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -27,7 +29,6 @@ import com.seasonforge.widget.data.SeasonRepository
 import com.seasonforge.widget.models.Game
 import com.seasonforge.widget.utils.SeasonNotificationScheduler
 import com.seasonforge.widget.utils.SeasonUtils
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -37,6 +38,24 @@ class MainActivity : AppCompatActivity() {
     private lateinit var recyclerView: RecyclerView
     private val adapter = GameAdapter { game ->
         showWidgetTypeDialog(game)
+    }
+
+    private var pendingNotificationGame: Game? = null
+
+    private val requestNotificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        val game = pendingNotificationGame
+        pendingNotificationGame = null
+        if (game != null) {
+            if (isGranted) {
+                openNotificationOptionsDialog(game)
+            } else {
+                val isRu = SeasonUtils.isRu(this)
+                val msg = if (isRu) "Разрешение на уведомления не предоставлено" else "Notification permission denied"
+                Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -83,6 +102,31 @@ class MainActivity : AppCompatActivity() {
         loadData()
         checkAppUpdate()
     }
+
+    override fun onResume() {
+        super.onResume()
+        refreshAllWidgets()
+    }
+
+    private fun refreshAllWidgets() {
+        lifecycleScope.launch(Dispatchers.IO) {
+            val appWidgetManager = AppWidgetManager.getInstance(this@MainActivity)
+            val countdownIds = appWidgetManager.getAppWidgetIds(ComponentName(this@MainActivity, CountdownWidget::class.java))
+            for (id in countdownIds) {
+                CountdownWidget.performUpdateWidget(this@MainActivity, appWidgetManager, id)
+            }
+            val combinedIds = appWidgetManager.getAppWidgetIds(ComponentName(this@MainActivity, CombinedWidget::class.java))
+            for (id in combinedIds) {
+                CombinedWidget.performUpdateWidget(this@MainActivity, appWidgetManager, id)
+            }
+            val cardIds = appWidgetManager.getAppWidgetIds(ComponentName(this@MainActivity, CurrentSeasonWidget::class.java))
+            for (id in cardIds) {
+                CurrentSeasonWidget.performUpdateWidget(this@MainActivity, appWidgetManager, id)
+            }
+        }
+    }
+
+
 
     private fun checkAppUpdate() {
         com.seasonforge.widget.utils.AppUpdateManager.checkForUpdate(this, forceCheck = false) { releaseInfo ->
@@ -236,7 +280,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadData() {
-        CoroutineScope(Dispatchers.IO).launch {
+        lifecycleScope.launch(Dispatchers.IO) {
             val repository = SeasonRepository(this@MainActivity)
             val response = repository.fetchSeasons()
             val games = response?.games ?: emptyList()
@@ -280,11 +324,11 @@ class MainActivity : AppCompatActivity() {
                 badgeCard?.text = "Compact"
 
                 tvTitleCountdown?.text = "Countdown Timer"
-                tvDescCountdown?.text = "3 countdown boxes: DAYS | HOURS | MINUTES"
-                badgeCountdown?.text = "3D Countdown"
+                tvDescCountdown?.text = "Unified countdown card: DAYS | HH:MM:SS"
+                badgeCountdown?.text = "Countdown"
 
                 tvTitleCombined?.text = "Hybrid Widget"
-                tvDescCombined?.text = "Full current season info + 3 countdown boxes"
+                tvDescCombined?.text = "Full current season info + countdown card"
                 badgeCombined?.text = "Maximum Info"
             }
 
@@ -326,7 +370,7 @@ class MainActivity : AppCompatActivity() {
             val displayName = game.name?.get(this) ?: game.id
             val isRu = SeasonUtils.isRu(this)
             val widgetTypeTitle = when (widgetType) {
-                "countdown" -> if (isRu) "Таймер 3D" else "Countdown 3D"
+                "countdown" -> if (isRu) "Таймер" else "Countdown"
                 "combined" -> if (isRu) "Гибридный" else "Combined Hybrid"
                 else -> if (isRu) "Карточка сезона" else "Season Card"
             }
@@ -388,7 +432,20 @@ class MainActivity : AppCompatActivity() {
                 val mins = triple?.third ?: 0
                 previewView.findViewById<TextView?>(R.id.tv_box_days_val)?.text = "$days"
                 previewView.findViewById<TextView?>(R.id.tv_box_hours_val)?.text = "$hours"
-                previewView.findViewById<TextView?>(R.id.tv_box_mins_val)?.text = "$mins"
+                
+                val minsTv = previewView.findViewById<TextView?>(R.id.tv_box_mins_val)
+                if (minsTv is Chronometer) {
+                    val secsUntilEndOfDay = SeasonUtils.getSecsUntilEndOfDay(startDateStr)
+                    if (secsUntilEndOfDay > 0L) {
+                        minsTv.base = SystemClock.elapsedRealtime() + secsUntilEndOfDay * 1000L
+                        minsTv.isCountDown = true
+                        minsTv.start()
+                    } else {
+                        minsTv.text = "00:00:00"
+                    }
+                } else {
+                    minsTv?.text = "$mins"
+                }
 
                 val repository = SeasonRepository(this)
                 val lastUpdatedStr = SeasonUtils.getFormattedLastUpdatedTime(repository.getLastUpdatedTimestamp(), this)
@@ -519,13 +576,17 @@ class MainActivity : AppCompatActivity() {
     fun showNotificationDialog(game: Game) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 101)
+                pendingNotificationGame = game
+                requestNotificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                return
             }
         }
+        openNotificationOptionsDialog(game)
+    }
 
+    private fun openNotificationOptionsDialog(game: Game) {
         val isRu = SeasonUtils.isRu(this)
         val displayName = game.name?.get(this) ?: game.id
-        val seasonName = game.nextSeason?.name?.get(this) ?: "TBA"
 
         val options = if (isRu) {
             arrayOf(

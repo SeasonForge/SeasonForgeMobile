@@ -22,19 +22,7 @@ class NotificationReceiver : BroadcastReceiver() {
         val notificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        val channelId = "season_launch_channel"
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channelName = "Season Launch Reminders"
-            val channel = NotificationChannel(
-                channelId,
-                channelName,
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Reminders about upcoming game seasons"
-                enableVibration(true)
-            }
-            notificationManager.createNotificationChannel(channel)
-        }
+        ensureNotificationChannel(notificationManager)
 
         val mainIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -48,7 +36,7 @@ class NotificationReceiver : BroadcastReceiver() {
 
         val title = "🔔 $gameTitle: $seasonName"
 
-        val builder = NotificationCompat.Builder(context, channelId)
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher)
             .setContentTitle(title)
             .setContentText(notifMessage)
@@ -60,9 +48,27 @@ class NotificationReceiver : BroadcastReceiver() {
     }
 
     companion object {
+        const val CHANNEL_ID = "season_launch_channel"
         const val EXTRA_GAME_ID = "com.seasonforge.widget.EXTRA_GAME_ID"
         const val EXTRA_GAME_TITLE = "com.seasonforge.widget.EXTRA_GAME_TITLE"
         const val EXTRA_SEASON_NAME = "com.seasonforge.widget.EXTRA_SEASON_NAME"
         const val EXTRA_NOTIF_MESSAGE = "com.seasonforge.widget.EXTRA_NOTIF_MESSAGE"
+
+        fun ensureNotificationChannel(notificationManager: NotificationManager) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                if (notificationManager.getNotificationChannel(CHANNEL_ID) == null) {
+                    val channelName = "Season Launch Reminders"
+                    val channel = NotificationChannel(
+                        CHANNEL_ID,
+                        channelName,
+                        NotificationManager.IMPORTANCE_HIGH
+                    ).apply {
+                        description = "Reminders about upcoming game seasons"
+                        enableVibration(true)
+                    }
+                    notificationManager.createNotificationChannel(channel)
+                }
+            }
+        }
     }
 }

@@ -12,6 +12,10 @@ object SeasonNotificationScheduler {
     private const val PREFS_NAME = "com.seasonforge.widget.NOTIF_PREFS"
     private const val PREF_KEY_OFFSET_LABEL = "notif_offset_label_"
 
+    private fun getRequestCode(gameId: String): Int {
+        return gameId.hashCode() and 0x7FFFFFFF
+    }
+
     fun getSavedOffsetLabel(context: Context, gameId: String): String? {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         return prefs.getString(PREF_KEY_OFFSET_LABEL + gameId, null)
@@ -45,7 +49,7 @@ object SeasonNotificationScheduler {
 
         val pendingIntent = PendingIntent.getBroadcast(
             context,
-            game.id.hashCode(),
+            getRequestCode(game.id),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -84,7 +88,7 @@ object SeasonNotificationScheduler {
 
         val pendingIntent = PendingIntent.getBroadcast(
             context,
-            gameId.hashCode(),
+            getRequestCode(gameId),
             intent,
             PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
         )

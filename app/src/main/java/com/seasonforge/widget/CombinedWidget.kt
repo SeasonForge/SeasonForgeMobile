@@ -2,12 +2,9 @@ package com.seasonforge.widget
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
-import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.os.Build
-import android.os.SystemClock
 import android.widget.RemoteViews
 import android.widget.Toast
 import com.seasonforge.widget.data.SeasonRepository
@@ -18,70 +15,30 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class CombinedWidget : AppWidgetProvider() {
+class CombinedWidget : BaseWidgetProvider() {
 
-    override fun onReceive(context: Context, intent: Intent) {
-        super.onReceive(context, intent)
-        val action = intent.action
-        if (action == ACTION_SMART_UPDATE || action == ACTION_MANUAL_REFRESH || action == AppWidgetManager.ACTION_APPWIDGET_UPDATE || action == Intent.ACTION_USER_PRESENT) {
-            val appWidgetId = intent.getIntExtra(EXTRA_WIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
-            val appWidgetIds = intent.getIntArrayExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS)
-            val targetIds = when {
-                appWidgetId != AppWidgetManager.INVALID_APPWIDGET_ID -> intArrayOf(appWidgetId)
-                appWidgetIds != null && appWidgetIds.isNotEmpty() -> appWidgetIds
-                else -> AppWidgetManager.getInstance(context).getAppWidgetIds(ComponentName(context, CombinedWidget::class.java))
-            }
+    override val manualRefreshAction: String = ACTION_MANUAL_REFRESH
+    override val smartUpdateAction: String = ACTION_SMART_UPDATE
+    override val extraWidgetIdKey: String = EXTRA_WIDGET_ID
+    override val alarmRequestCodeOffset: Int = 20000
 
-            if (targetIds.isNotEmpty()) {
-                val pendingResult = goAsync()
-                val appWidgetManager = AppWidgetManager.getInstance(context)
-                val isManual = (action == ACTION_MANUAL_REFRESH)
-                if (isManual) {
-                    val msg = if (SeasonUtils.isRu(context)) "🔄 Обновление виджета..." else "🔄 Refreshing widget..."
-                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                    for (id in targetIds) {
-                        if (id != AppWidgetManager.INVALID_APPWIDGET_ID) {
-                            val quickViews = RemoteViews(context.packageName, R.layout.widget_combined)
-                            quickViews.setTextViewText(R.id.tv_status, SeasonUtils.getUpdatingText(context))
-                            appWidgetManager.partiallyUpdateAppWidget(id, quickViews)
-                        }
-                    }
-                }
-                CoroutineScope(Dispatchers.IO).launch {
-                    try {
-                        for (id in targetIds) {
-                            if (id != AppWidgetManager.INVALID_APPWIDGET_ID) {
-                                performUpdateWidget(context, appWidgetManager, id, isManualRefresh = isManual)
-                            }
-                        }
-                        if (isManual) {
-                            withContext(Dispatchers.Main) {
-                                Toast.makeText(context, SeasonUtils.getWidgetUpdatedToastText(context), Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    } finally {
-                        pendingResult?.finish()
-                    }
-                }
-            }
-        }
-    }
-
-    override fun onUpdate(
+    override suspend fun performUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
-        appWidgetIds: IntArray
+        appWidgetId: Int,
+        isManualRefresh: Boolean
     ) {
-        val pendingResult = goAsync()
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                for (appWidgetId in appWidgetIds) {
-                    performUpdateWidget(context, appWidgetManager, appWidgetId)
-                }
-            } finally {
-                pendingResult?.finish()
-            }
-        }
+        performUpdateWidget(context, appWidgetManager, appWidgetId, isManualRefresh = isManualRefresh)
+    }
+
+    override fun updateUpdatingState(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        appWidgetId: Int
+    ) {
+        val quickViews = RemoteViews(context.packageName, R.layout.widget_combined)
+        quickViews.setTextViewText(R.id.tv_status, SeasonUtils.getUpdatingText(context))
+        appWidgetManager.partiallyUpdateAppWidget(appWidgetId, quickViews)
     }
 
     companion object {
@@ -126,9 +83,9 @@ class CombinedWidget : AppWidgetProvider() {
             appWidgetId: Int,
             isManualRefresh: Boolean = false
         ) {
-            // Schedule at next HOUR boundary — Chronometer handles MM:SS within the hour itself
+            // Schedule at next DAY boundary — Chronometer handles HH:MM:SS within the day itself
             val scheduledUpdateMillis = System.currentTimeMillis().let { now ->
-                now + (3_600_000L - (now % 3_600_000L))
+                now + (86_400_000L - (now % 86_400_000L))
             }
             val gameId = getGameId(context, appWidgetId)
             val theme = getWidgetTheme(context, appWidgetId)
@@ -240,13 +197,20 @@ class CombinedWidget : AppWidgetProvider() {
             views.setTextViewText(R.id.tv_box_mins_label, SeasonUtils.getMinsLabel(context))
 
             views.setTextViewText(R.id.tv_box_days_val, "$days")
-            views.setTextViewText(R.id.tv_box_hours_val, "$hours")
-            // Chronometer counts down MM:SS for the remaining seconds in the current hour.
-            // No per-minute alarm needed — it ticks by itself every second.
-            val secsInHour = SeasonUtils.getSecsInCurrentHour(startDateStr)
-            val chronometerBaseMs = android.os.SystemClock.elapsedRealtime() + secsInHour * 1000L
-            views.setChronometer(R.id.tv_box_mins_val, chronometerBaseMs, null, true)
-            views.setChronometerCountDown(R.id.tv_box_mins_val, true)
+            val secsUntilEndOfDay = SeasonUtils.getSecsUntilEndOfDay(startDateStr)
+            val target = SeasonUtils.parseIsoDate(startDateStr)
+            val isFinishedOrInvalid = target == null || java.time.Instant.now().isAfter(target) || (days == 0L && secsUntilEndOfDay <= 0L)
+
+            if (isFinishedOrInvalid || secsUntilEndOfDay <= 0L) {
+                views.setChronometer(R.id.tv_box_mins_val, android.os.SystemClock.elapsedRealtime(), null, false)
+                views.setChronometerCountDown(R.id.tv_box_mins_val, false)
+                views.setTextViewText(R.id.tv_box_mins_val, "00:00:00")
+            } else {
+                val chronometerBaseMs = android.os.SystemClock.elapsedRealtime() + secsUntilEndOfDay * 1000L
+                views.setChronometer(R.id.tv_box_mins_val, chronometerBaseMs, null, true)
+                views.setChronometerCountDown(R.id.tv_box_mins_val, true)
+            }
+
 
             val repository = SeasonRepository(context)
             val lastUpdatedStr = SeasonUtils.getFormattedLastUpdatedTime(repository.getLastUpdatedTimestamp(), context)

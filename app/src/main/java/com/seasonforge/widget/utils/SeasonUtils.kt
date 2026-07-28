@@ -76,7 +76,7 @@ object SeasonUtils {
 
     fun getDaysLabel(context: android.content.Context? = null): String = if (isRu(context)) "ДНЕЙ" else "DAYS"
     fun getHoursLabel(context: android.content.Context? = null): String = if (isRu(context)) "ЧАСОВ" else "HOURS"
-    fun getMinsLabel(context: android.content.Context? = null): String = if (isRu(context)) "МИНУТ" else "MINS"
+    fun getMinsLabel(context: android.content.Context? = null): String = if (isRu(context)) "ЧАС : МИН : СЕК" else "HRS : MIN : SEC"
 
     fun getFormattedLastUpdatedTime(timestamp: Long, context: android.content.Context? = null): String {
         val isRuLang = isRu(context)
@@ -84,15 +84,6 @@ object SeasonUtils {
         val now = System.currentTimeMillis()
         val diffMs = now - timestamp
         if (diffMs < 0L) return if (isRuLang) "Обновлено --:--" else "Updated --:--"
-
-        val diffMins = java.util.concurrent.TimeUnit.MILLISECONDS.toMinutes(diffMs)
-
-        if (diffMins < 5) {
-            return if (isRuLang) "Обновлено только что" else "Updated just now"
-        }
-        if (diffMins < 60) {
-            return if (isRuLang) "Обновлено $diffMins мин. назад" else "Updated ${diffMins}m ago"
-        }
 
         val timeZone = java.util.TimeZone.getDefault()
         val calendarNow = java.util.Calendar.getInstance(timeZone).apply { timeInMillis = now }
@@ -147,16 +138,19 @@ object SeasonUtils {
     }
 
     /**
-     * Returns the remaining seconds within the current hour (for Chronometer base).
-     * Chronometer will count down MM:SS automatically — no per-minute alarm needed.
+     * Returns the remaining seconds within the current day-cycle (for Chronometer base).
+     * Chronometer counts down HH:MM:SS automatically — only 1 alarm per day needed.
+     * Returns seconds = totalSeconds % 86400, clamped to [1..86400].
      */
-    fun getSecsInCurrentHour(targetDateStr: String?): Long {
+    fun getSecsUntilEndOfDay(targetDateStr: String?): Long {
         val target = parseIsoDate(targetDateStr) ?: return 0L
         val now = Instant.now()
         if (now.isAfter(target)) return 0L
         val totalSeconds = now.until(target, ChronoUnit.SECONDS)
-        return totalSeconds % 3600  // seconds remaining in the current hour
+        val rem = totalSeconds % 86400
+        return if (rem == 0L && totalSeconds > 0) 86400L else rem
     }
+
 
 
     fun getGameArtResource(gameId: String?): Int? {
@@ -237,6 +231,18 @@ object WidgetPrefsManager {
             .putString(PREF_GAME_ID_KEY + appWidgetId, gameId)
             .putString(PREF_THEME_KEY + appWidgetId, theme)
             .putInt(PREF_OPACITY_KEY + appWidgetId, opacity)
+            .remove(PENDING_GAME_ID)
+            .remove(PENDING_THEME)
+            .remove(PENDING_OPACITY)
+            .apply()
+    }
+
+    fun clearPendingConfig(context: android.content.Context) {
+        context.getSharedPreferences(PREFS_NAME, android.content.Context.MODE_PRIVATE)
+            .edit()
+            .remove(PENDING_GAME_ID)
+            .remove(PENDING_THEME)
+            .remove(PENDING_OPACITY)
             .apply()
     }
 

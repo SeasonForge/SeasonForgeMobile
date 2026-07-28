@@ -123,7 +123,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Таймер (3 плашки)"
+                android:text="Таймер отсчёта"
                 android:textColor="#F5C342"
                 android:textSize="14sp"
                 android:textStyle="bold" />
@@ -137,7 +137,7 @@
                 android:paddingTop="2dp"
                 android:paddingEnd="6dp"
                 android:paddingBottom="2dp"
-                android:text="3D Отсчет"
+                android:text="Отсчет"
                 android:textColor="#F5C342"
                 android:textSize="9sp"
                 android:textStyle="bold" />
@@ -148,7 +148,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="3 стильные карточки отсчёта: ДНИ | ЧАСЫ | МИНУТЫ"
+            android:text="Единая стильная плашка отсчёта: ДНИ | ЧЧ:ММ:СС"
             android:textColor="#A0A0B0"
             android:textSize="11sp" />
 
@@ -209,7 +209,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="Полная сводка текущего сезона + 3 плашки отсчёта старта"
+            android:text="Полная сводка текущего сезона + плашка отсчёта старта"
             android:textColor="#A0A0B0"
             android:textSize="11sp" />
 

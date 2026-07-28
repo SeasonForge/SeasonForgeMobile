@@ -85,24 +85,27 @@
             android:gravity="center_vertical"
             android:orientation="vertical">
 
-            <!-- 3 Equal Box Timer Layout (Days : Hours : Mins&Secs Live Chronometer) -->
+            <!-- Single Unified Timer Card Background -->
             <LinearLayout
                 android:id="@+id/timer_boxes_layout"
                 android:layout_width="match_parent"
-                android:layout_height="38dp"
-                android:gravity="center"
-                android:orientation="horizontal">
+                android:layout_height="46dp"
+                android:background="@drawable/widget_box_bg"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="8dp"
+                android:paddingEnd="8dp"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp">
 
-                <!-- Days Box -->
+                <!-- Days Section (Transparent Background) -->
                 <LinearLayout
                     android:id="@+id/box_days_container"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:background="@drawable/widget_box_bg"
                     android:gravity="center"
-                    android:orientation="vertical"
-                    android:padding="1dp">
+                    android:orientation="vertical">
 
                     <TextView
                         android:id="@+id/tv_box_days_val"
@@ -110,8 +113,9 @@
                         android:layout_height="wrap_content"
                         android:text="144"
                         android:textColor="#F5C342"
-                        android:textSize="14sp"
-                        android:textStyle="bold" />
+                        android:textSize="22sp"
+                        android:textStyle="bold"
+                        android:fontFeatureSettings="tnum" />
 
                     <TextView
                         android:id="@+id/tv_box_days_label"
@@ -119,13 +123,14 @@
                         android:layout_height="wrap_content"
                         android:text="ДНЕЙ"
                         android:textColor="#8A8A9E"
-                        android:textSize="7sp"
+                        android:textSize="8sp"
                         android:textStyle="bold" />
                 </LinearLayout>
 
+                <!-- Center Colon Separator -->
                 <ViewFlipper
                     android:id="@+id/flipper_colon_1"
-                    android:layout_width="8dp"
+                    android:layout_width="12dp"
                     android:layout_height="wrap_content"
                     android:autoStart="true"
                     android:flipInterval="1000">
@@ -135,7 +140,7 @@
                         android:gravity="center"
                         android:text=":"
                         android:textColor="#F5C342"
-                        android:textSize="12sp"
+                        android:textSize="20sp"
                         android:textStyle="bold" />
                     <TextView
                         android:layout_width="match_parent"
@@ -143,26 +148,25 @@
                         android:gravity="center"
                         android:text=":"
                         android:textColor="#33F5C342"
-                        android:textSize="12sp"
+                        android:textSize="20sp"
                         android:textStyle="bold" />
                 </ViewFlipper>
 
-                <!-- Hours Box -->
+                <!-- Hours Box (hidden — covered by HH:MM:SS chronometer) -->
                 <LinearLayout
                     android:id="@+id/box_hours_container"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:background="@drawable/widget_box_bg"
                     android:gravity="center"
                     android:orientation="vertical"
-                    android:padding="1dp">
+                    android:visibility="gone">
 
                     <TextView
                         android:id="@+id/tv_box_hours_val"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="8"
+                        android:text="00"
                         android:textColor="#F5C342"
                         android:textSize="14sp"
                         android:textStyle="bold" />
@@ -182,7 +186,8 @@
                     android:layout_width="8dp"
                     android:layout_height="wrap_content"
                     android:autoStart="true"
-                    android:flipInterval="1000">
+                    android:flipInterval="1000"
+                    android:visibility="gone">
                     <TextView
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -201,35 +206,36 @@
                         android:textStyle="bold" />
                 </ViewFlipper>
 
-                <!-- Minutes Box -->
+                <!-- Live HH:MM:SS Chronometer Section (Transparent Background) -->
                 <LinearLayout
                     android:id="@+id/box_mins_container"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:background="@drawable/widget_box_bg"
+                    android:layout_weight="2.2"
                     android:gravity="center"
-                    android:orientation="vertical"
-                    android:padding="1dp">
+                    android:orientation="vertical">
 
                     <Chronometer
                         android:id="@+id/tv_box_mins_val"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="00:00"
+                        android:text="00:00:00"
                         android:textColor="#F5C342"
-                        android:textSize="14sp"
+                        android:textSize="22sp"
                         android:textStyle="bold"
+                        android:letterSpacing="0.28"
+                        android:fontFeatureSettings="tnum"
                         android:countDown="true" />
 
                     <TextView
                         android:id="@+id/tv_box_mins_label"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="МИНУТ"
+                        android:text="ЧАС : МИН : СЕК"
                         android:textColor="#8A8A9E"
-                        android:textSize="7sp"
-                        android:textStyle="bold" />
+                        android:textSize="9sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.25" />
                 </LinearLayout>
 
             </LinearLayout>

@@ -9,8 +9,9 @@ import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.Spinner
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.seasonforge.widget.data.SeasonRepository
-import kotlinx.coroutines.CoroutineScope
+import com.seasonforge.widget.utils.WidgetPrefsManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -91,6 +92,8 @@ class WidgetConfigActivity : AppCompatActivity() {
                     }
                 }
 
+                WidgetPrefsManager.clearPendingConfig(this)
+
                 val resultValue = Intent()
                 resultValue.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
                 setResult(Activity.RESULT_OK, resultValue)
@@ -100,7 +103,7 @@ class WidgetConfigActivity : AppCompatActivity() {
     }
 
     private fun loadGames() {
-        CoroutineScope(Dispatchers.IO).launch {
+        lifecycleScope.launch(Dispatchers.IO) {
             val repository = SeasonRepository(this@WidgetConfigActivity)
             val response = repository.fetchSeasons()
 

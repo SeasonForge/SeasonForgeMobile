@@ -1,4 +1,4 @@
-# 🚀 SeasonForge v2.7.0 — Initial Release
+# 🚀 SeasonForge v2.8.3 — Latest Release
 
 Android app and home screen widgets to track new season & league start dates for **Path of Exile 1 & 2**, **Diablo IV**, **Last Epoch**, **Torchlight: Infinite**, and more!
 
@@ -57,4 +57,4 @@ Android app and home screen widgets to track new season & league start dates for
 ---
 
 ### 📦 Download / Скачать:
-Download `SeasonForge-v2.7.0.apk` below and install on your Android device (Android 8.0+ required).
+Download `SeasonForge-v2.8.3.apk` below and install on your Android device (Android 8.0+ required).
